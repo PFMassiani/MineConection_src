@@ -1,4 +1,4 @@
-package serveur.interaction;
+package share.interaction;
 
 import java.sql.*;
 import java.util.Iterator;
