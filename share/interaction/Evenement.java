@@ -231,7 +231,12 @@ public class Evenement extends Interaction {
 		  i = it.next();
 		  randI --;
 	  }
-	  
+
 	  return Evenement.chercher(i);
+  }
+
+  public void afficher() {
+	  // TODO Affichage d'un événement
+
   }
 }
