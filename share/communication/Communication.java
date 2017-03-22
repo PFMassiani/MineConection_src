@@ -10,10 +10,10 @@ public class Communication implements Serializable{
 	
   private TypeBackupable type;
   private Action action;
-  private Backupable o;
+  private Serializable o;
   private int id;
 
-  public Communication(TypeBackupable type, Action action, Backupable o) throws InvalidParameterException{
+  public Communication(TypeBackupable type, Action action, Serializable o) throws InvalidParameterException{
     this.type = type;
     this.action = action;
     this.o = o;
@@ -52,7 +52,11 @@ public class Communication implements Serializable{
   public int getID(){
     return id;
   }
-  public Backupable getObjet(){
+  public Serializable getObjet(){
     return o;
+  }
+  public Backupable getObjetBackupable() {
+	  if (o instanceof Backupable) return (Backupable) o;
+	  else return null;
   }
 }

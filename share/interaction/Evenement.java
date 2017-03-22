@@ -1,32 +1,41 @@
 package share.interaction;
 
+import java.io.IOException;
+import java.io.Serializable;
 import java.sql.*;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
 import exception.*;
-import serveur.utilisateur.Etudiant;
-import serveur.utilisateur.Utilisateur;
+//import serveur.utilisateur.Etudiant;
+import share.utilisateur.Etudiant;
+import share.utilisateur.Utilisateur;
+import share.communication.Action;
+import share.communication.Communication;
+import share.communication.ConnexionServeur;
+import share.communication.TypeBackupable;
 
-public class Evenement extends Interaction {
+public class Evenement extends share.interaction.Interaction {
 
   //------------------------------------------------------------------------------------------------------------------------
   // ATTRIBUTS ---------------------------------------------------------------------------------------------------------
   // -----------------------------------------------------------------------------------------------------------------------
   
   private static final long serialVersionUID = -1977854013851011478L;
-
-  private static DAEvenement dae = new DAEvenement();
   
   private Date date;
   private int debutH, debutM, duree;
+  
+  private static Set<Integer> ids;
+  private Set<Etudiant> principale,attente;
   
   //------------------------------------------------------------------------------------------------------------------------
   // CONSTRUCTEURS ---------------------------------------------------------------------------------------------------------
   // -----------------------------------------------------------------------------------------------------------------------
   
-  public Evenement(String nom, String description, int places, Date date, int debutH, int debutM, int duree, Utilisateur createur){
-    super(dae.getNewID(),nom,description,places,createur);
+  public Evenement(int id,String nom, String description, int places, Date date, int debutH, int debutM, int duree, Utilisateur createur) {
+    super(id,nom,description,places,createur);
 
     this.debutH = debutH + ((int) debutM / 60);
     this.debutM = debutM % 60;
@@ -35,31 +44,7 @@ public class Evenement extends Interaction {
     this.date = date;
     this.date.setTime(this.date.getTime() + nbJours * 24 * 60 * 60 * 10000);
     this.duree = duree;
-    
-    dae.update(this);
     if (IDENTIFIANT == -1) throw new InvalidIDException("");
-  }
-  
-  public Evenement(ResultSet r) throws SQLException{
-    super(r.getInt("id"), "", "", 0, null);
-    try {
-      ResultSetMetaData meta = r.getMetaData();
-      if (meta.getTableName(1).compareTo("Evenement") != 0) throw new InvalidResultException("Le résultat ne provient pas de la table Evenement");
-
-      nom = r.getString("nom");
-      description = r.getString("description");
-      places = r.getInt("places");
-      date = r.getDate("date");
-      debutH = r.getInt("debut_h");
-      debutM = r.getInt("debut_m");
-      duree = r.getInt("duree");
-      
-      if (r.getInt("createur_est_etudiant") == TRUE) createur = Etudiant.chercher(r.getInt("createur_etudiant_id"));
-      // else createur = Association.chercher(r.getInt("createur_assciation_id"));
-      
-    } catch (InvalidResultException ex) {
-      System.out.println("InvalidResultException : " + ex.getMessage());
-    }
   }
   
   //------------------------------------------------------------------------------------------------------------------------
@@ -69,12 +54,12 @@ public class Evenement extends Interaction {
   public Date getDebut(){
     return date;
   }
-  public long getDuree(){
+  public int getDuree(){
     return duree;
   }
   public String getDureeHM(){
     int h = (int) (duree / 60);
-    int m = duree - 60 * h;
+    int m = (int) duree - 60 * h;
     String s = "";
     if (h != 0) s += h + "h ";
     s += m + "min";
@@ -83,58 +68,19 @@ public class Evenement extends Interaction {
   public long getFin(){
     return date.getTime() + ( ( debutH * 60 ) + debutM ) * 60 * 1000 ;
   }
-  
-  @Override
-  public String getUpdate() {
-    String update = "nom = '" + nom + 
-        "', description = '" + description + 
-        "', places = " + places + 
-        ", places_restantes = " + placesRestantes + 
-        ", date = '" + date + 
-        "', duree = " + duree +
-        ", debut_h = " + debutH +
-        ", debut_m = " + debutM;
-    if (createur instanceof Etudiant) update += " , createur_est_etudiant = TRUE , " +
-    		                                      "createur_etudiant_id = " + createur.getID() + 
-    		                                      " , createur_association_id = NULL";
-    else update += " , createur_est_etudiant = FALSE , " +
-    		           "createur_etudiant_id = NULL , " +
-    		           "createur_association_id = " + createur.getID();
-    return update;
-  }
-  public String getTable(){
-    return "evt_" + IDENTIFIANT;
-  }
   public static Set<Integer> ids(){
-    return dae.ids();
+    return ids;
   }
-  public Set<Etudiant> participants(){
-    return dae.participants(this);
+  public Set<Etudiant> principale(){
+    return principale;
   }
   public Set<Etudiant> inscrits(){
-    return dae.inscrits(this);
+	Set<Etudiant> inscrits = new HashSet<>(principale);
+	inscrits.addAll(attente);
+    return inscrits;
   }
-  //------------------------------------------------------------------------------------------------------------------------
-  // UTILITAIRE ---------------------------------------------------------------------------------------------------------
-  // -----------------------------------------------------------------------------------------------------------------------
-  
-  public boolean supprimer() throws MissingObjectException{
-    return dae.supprimer(this);
-  }
-  
-  public static boolean supprimer(int id) throws MissingObjectException{
-    return dae.supprimer(id);
-  }
-  
-  public boolean update(){
-    boolean reussi = dae.update(this);
-    if (reussi && placesUpdate) reussi &= dae.updateEvenement(this).isEmpty();
-    if (reussi) placesUpdate = false;
-    return reussi;
-  }
-  
-  public static Evenement chercher(int id){
-    return dae.chercher(id);
+  public Set<Etudiant> attente(){
+	  return attente;
   }
   
   @Override
@@ -156,6 +102,8 @@ public class Evenement extends Interaction {
   // MÉTIER ---------------------------------------------------------------------------------------------------------
   // -----------------------------------------------------------------------------------------------------------------------
   
+  // TODO Recherche par nom
+  
   public boolean estCompatibleAvec(Evenement evt){
     Evenement premier, deuxieme;
     if (date.before(evt.date)){
@@ -174,7 +122,7 @@ public class Evenement extends Interaction {
   }
   
   public boolean participe(Etudiant e){
-    return participants().contains(e);
+    return principale().contains(e);
   }
   
   public boolean estInscrit(Etudiant e){
@@ -187,56 +135,69 @@ public class Evenement extends Interaction {
     placesUpdate = true;
   }
   
+  // TODO Reprendre la manière de faire des modifications à un objet:
+  //	- On modifie l'objet / la liste des participants depuis la classe client, et on update tout
+  // 	- On fait remonter la communication depuis la classe client jusqu'au serveur, et c'est lui qui s'occupe de tout
+  // 				---> À FAIRE
+  
   public boolean ajouterPrincipale(Etudiant e){
-    boolean reussi = dae.ajouterPrincipale(this, e);
-    if (reussi) placesRestantes--;
-    update();
-    return reussi;
+	  if (push(e)) {
+		  attente.remove(e);
+		  principale.add(e);
+		  placesRestantes--;
+		  
+		  return true;
+	  }
+	  else return false;
   }
   
   public boolean ajouterAttente(Etudiant e){
-    return dae.ajouterAttente(this, e);
+	  if (push(e)) {
+		  if (principale.remove(e)) placesRestantes++;
+		  attente.add(e);
+		  return true;
+	  }
+	  else return false;
   }
   
   // Renvoie 0 si ok, 1 si attente, 2 si déjà dedans
-  public int ajouter(Etudiant e){
-    if (placesRestantes > 0 ) {
-      ajouterPrincipale(e);
-      return 0;
-    }
-    
-    else if (participe(e)) return 2;
-    
-    else {
-      ajouterAttente(e);
-      return 0;
-    }
-  }
-  
-  public boolean supprimerInscrit(Etudiant e){
-    boolean participe = participe(e), reussi = dae.supprimerInscrit(this, e);
-    if (reussi && participe) {
-      placesRestantes ++;
-      update();
-    }
+  public boolean ajouter(Etudiant e){
+	  boolean reussi = false;
+    if (!(reussi = ajouterPrincipale(e))) reussi = ajouterAttente(e);
     return reussi;
   }
   
+  public void supprimerInscrit(Etudiant e){
+	  if(!principale.remove(e)) attente.remove(e);
+  }
+  
   public static Evenement getRandomEvent() {
-	  Set<Integer> ids = ids();
-	  int randI = (int) ( Math.random() * ids.size() );
-	  Iterator<Integer> it = ids.iterator();
-	  int i = 0;
-	  while (it.hasNext() && randI >= 0) {
-		  i = it.next();
-		  randI --;
-	  }
-
-	  return Evenement.chercher(i);
+	  // TODO
+	  return null;
   }
 
   public void afficher() {
 	  // TODO Affichage d'un événement
+  }
+  
+  private boolean push(Serializable b) {
+	  try{
+		  Communication com = new Communication(TypeBackupable.EVENEMENT, Action.SAUVEGARDER,this);
+		  ConnexionServeur.getOOS().writeObject(com);
+		  return ConnexionServeur.getIOS().readBoolean();
+	  } catch (InvalidParameterException | IOException ex) {
+		  System.out.println(ex.getMessage());
+	  }
+	  return false;
+  }
 
+  public int getDebutH() {
+	  return debutH;
+  }
+  public int getDebutM() {
+	  return debutM;
+  }
+  public Date getDate() {
+	  return date;
   }
 }

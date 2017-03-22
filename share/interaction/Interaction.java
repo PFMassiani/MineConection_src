@@ -3,11 +3,11 @@ package share.interaction;
 import java.io.Serializable;
 
 import serveur.bdd.Backupable;
-import serveur.utilisateur.Utilisateur;
+import share.utilisateur.Utilisateur;
 
 // Classe mère de PAPS et de Evenement
 
-public abstract class Interaction implements Backupable, Serializable {
+public abstract class Interaction implements Serializable {
 
   /**
    * 
@@ -38,6 +38,11 @@ public abstract class Interaction implements Backupable, Serializable {
   
   public Interaction(int id, String n, int p, Utilisateur c){
     this(id,n,"",p,c);
+  }
+  
+  public Interaction(serveur.interaction.Interaction inter) {
+	  this(inter.getID(),inter.getNom(),inter.getDescription(),inter.getPlaces(),inter.getCreateur());
+	  placesRestantes = inter.getPlacesRestantes();
   }
   
   public int getID(){

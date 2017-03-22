@@ -1,6 +1,8 @@
 package serveur.interaction;
 
 import java.io.Serializable;
+import java.util.Set;
+import java.util.HashSet;
 
 import serveur.bdd.Backupable;
 import serveur.utilisateur.Utilisateur;
@@ -21,23 +23,31 @@ public abstract class Interaction implements Backupable, Serializable {
   protected int places, placesRestantes;
   protected Utilisateur createur;
   protected boolean placesUpdate = false;
+  
+  protected Set<serveur.utilisateur.Etudiant> principale,attente;
 //FileAttente attente;
   
   protected final int IDENTIFIANT;
   
   public final int FALSE = 0, TRUE = 1;
   
-  public Interaction(int id, String n, String d, int p, Utilisateur c){
+  protected Interaction(int id, String n, String d, int p, Utilisateur c){
     IDENTIFIANT = id;
     nom = n;
     description = d;
     places = p;
     placesRestantes = p;
     createur = c;
+    
+    principale = new HashSet<>();
+    attente = new HashSet<>();
   }
   
   public Interaction(int id, String n, int p, Utilisateur c){
     this(id,n,"",p,c);
+  }
+  public Interaction(share.interaction.Interaction inter) {
+	  this(inter.getID(),inter.getNom(),inter.getDescription(),inter.getPlaces(),inter.getCreateur());
   }
   
   public int getID(){

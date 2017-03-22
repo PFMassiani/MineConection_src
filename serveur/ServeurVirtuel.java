@@ -130,7 +130,7 @@ public class ServeurVirtuel extends Thread {
   public boolean supprimer (Communication com){
 	  boolean reussi = false;
 	  System.out.println("Suppression en cours...");
-	  Backupable o = com.getObjet();
+	  Backupable o = com.getObjetBackupable();
 
 	  
 	  try {

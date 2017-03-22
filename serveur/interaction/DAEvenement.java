@@ -32,7 +32,7 @@ public class DAEvenement extends DAO<Evenement> {
           String stmt = "CREATE TABLE IF NOT EXISTS evt_" + id + " (" +
               "ordre_adhesion INT UNSIGNED AUTO_INCREMENT NOT NULL, " +
               "id_etudiant INT UNSIGNED NOT NULL, " +
-              "date_adhesion DATE NoT NULL, " +
+              "date_adhesion DATE NOT NULL, " +
               "liste_principale BOOLEAN NOT NULL, " +
               "PRIMARY KEY(ordre_adhesion)," +
               "CONSTRAINT fk_id_etudiant_" + id + " FOREIGN KEY (id_etudiant) REFERENCES Etudiant(id)" +
@@ -86,14 +86,14 @@ public class DAEvenement extends DAO<Evenement> {
 	  return new Evenement(r);
   }
 
-  public Set<Etudiant> updateEvenement(Evenement evt){
+  public Set<Etudiant> updatePlaces(Evenement evt){
     Set<Etudiant> etudiantsRetires = new HashSet<Etudiant>();
     synchronized(DBModification.getInstance()){
       try{
         String requestSelection = "SELECT id_etudiant " +
             "FROM " + evt.getTable() + 
             " WHERE liste_principale = TRUE " +
-            "ORDER BY id_etudiant DESC";
+            "ORDER BY ordre_adhesion DESC";
         String requestMAJ = "ALTER TABLE " + evt.getTable() + " SET liste_principale = FALSE WHERE id_etudiant = ?";
         
         PreparedStatement stmtSelection = connexion.prepareStatement(requestSelection);
@@ -101,8 +101,8 @@ public class DAEvenement extends DAO<Evenement> {
         
         ResultSet r = null;
         
-        int id = 0;
-        while (evt.placesRestantes < 0){
+        int id = 0, n = - evt.placesRestantes;
+        for (int i = 0; i < n; i++){
           r = stmtSelection.executeQuery();
           if (r.next()){
             //Forcément vérifié, car evt.placesRestantes < 0, donc on a au moins une personne
@@ -111,7 +111,7 @@ public class DAEvenement extends DAO<Evenement> {
             etudiantsRetires.add(new Etudiant(r));
             
             stmtMAJ.setInt(1,id);
-            if (stmtMAJ.executeUpdate() == 1) evt.placesRestantes++;
+            stmtMAJ.executeUpdate();
           }
         }
       } catch (SQLException ex){
@@ -124,23 +124,41 @@ public class DAEvenement extends DAO<Evenement> {
   }
   
   public Set<Etudiant> participants(Evenement evt){
-    Set<Etudiant> participants = new HashSet<>();
+	    Set<Etudiant> participants = new HashSet<>();
 
-    try{
-      String query = "SELECT * FROM Etudiant WHERE id IN " +
-      		"( SELECT id_etudiant FROM " + evt.getTable() + " WHERE liste_principale = TRUE )";
-      ResultSet r = connexion.prepareStatement(query).executeQuery();
+	    try{
+	      String query = "SELECT * FROM Etudiant WHERE id IN " +
+	      		"( SELECT id_etudiant FROM " + evt.getTable() + " WHERE liste_principale = TRUE )";
+	      ResultSet r = connexion.prepareStatement(query).executeQuery();
 
-      while (r.next()) participants.add(new Etudiant(r));
-      
-    } catch (SQLException ex){
-      System.out.println("SQLException: " + ex.getMessage());
-      System.out.println("SQLState: " + ex.getSQLState());
-      System.out.println("VendorError: " + ex.getErrorCode());
-    }
+	      while (r.next()) participants.add(new Etudiant(r));
+	      
+	    } catch (SQLException ex){
+	      System.out.println("SQLException: " + ex.getMessage());
+	      System.out.println("SQLState: " + ex.getSQLState());
+	      System.out.println("VendorError: " + ex.getErrorCode());
+	    }
 
-    return participants;
-  }
+	    return participants;
+	  }
+  public Set<Etudiant> attente(Evenement evt){
+	    Set<Etudiant> attente = new HashSet<>();
+
+	    try{
+	      String query = "SELECT * FROM Etudiant WHERE id IN " +
+	      		"( SELECT id_etudiant FROM " + evt.getTable() + " WHERE liste_principale = FALSE )";
+	      ResultSet r = connexion.prepareStatement(query).executeQuery();
+
+	      while (r.next()) attente.add(new Etudiant(r));
+	      
+	    } catch (SQLException ex){
+	      System.out.println("SQLException: " + ex.getMessage());
+	      System.out.println("SQLState: " + ex.getSQLState());
+	      System.out.println("VendorError: " + ex.getErrorCode());
+	    }
+
+	    return attente;
+	  }
   
   public Set<Etudiant> inscrits(Evenement evt){
     Set<Etudiant> inscrits = new HashSet<>();
@@ -165,15 +183,25 @@ public class DAEvenement extends DAO<Evenement> {
     boolean reussi = false;
     synchronized(DBModification.getInstance()){
       try{
-        if (evt.getPlacesRestantes() > 0 && !evt.inscrits().contains(e)){
-          java.sql.Date maintenant = new java.sql.Date((new java.util.Date()).getTime());
-          String query = "INSERT INTO " + evt.getTable() + " (id_etudiant,date_adhesion,liste_principale) VALUES " +
-              "( " + e.getID() + 
-              ", '" + maintenant +
-              "', TRUE)";
-          // + 
-          if (connexion.prepareStatement(query).executeUpdate() == 1 )
-            reussi = true;
+        if (evt.getPlacesRestantes() > 0 && !evt.principale().contains(e)){
+        	String query;
+        	if (!evt.attente().contains(e)) {
+        		java.sql.Date maintenant = new java.sql.Date((new java.util.Date()).getTime());
+        		query = "INSERT INTO " + evt.getTable() + " (id_etudiant,date_adhesion,liste_principale) VALUES " +
+        				"( " + e.getID() + 
+        				", '" + maintenant +
+        				"', TRUE)";
+        		
+        	}
+        	else query = "UPDATE " + evt.getTable() + " SET liste_principale = TRUE WHERE id_etudiant = " + e.getID();
+        	
+        	if (connexion.prepareStatement(query).executeUpdate() == 1 ) {
+    			ResultSet r = connexion.prepareStatement("SELECT places_restantes FROM Evenement WHERE id = "+ evt.getID()).executeQuery();
+    			int restantes = 0;
+    			if (r.next()) restantes = r.getInt("places_restantes");
+    			connexion.prepareStatement("UPDATE Evenement SET places_restantes = " + (restantes-1));
+    			reussi = true;
+        	}
         }
       } catch (SQLException ex){
         System.out.println("SQLException: " + ex.getMessage());
@@ -187,14 +215,24 @@ public class DAEvenement extends DAO<Evenement> {
   public boolean ajouterAttente(Evenement evt, Etudiant e){
     boolean reussi = false;
     synchronized(DBModification.getInstance()){
-      try{
-        java.sql.Date maintenant = new java.sql.Date((new java.util.Date()).getTime());
-        String query = "INSERT INTO " + evt.getTable() + " (id_etudiant,date_adhesion,liste_principale) VALUES " +
-            "( " + e.getID() + 
-            ", '" + maintenant +
-            "', FALSE)";
-        if (connexion.prepareStatement(query).executeUpdate() == 1 )
-          reussi = true;
+    	try{
+    		java.sql.Date maintenant = new java.sql.Date((new java.util.Date()).getTime());
+    		String query;
+    		if (evt.principale().contains(e)) query = "UPDATE " + evt.getTable() + " SET liste_principale = FALSE WHERE id_etudiant = " + e.getID();
+    		else {
+    			query = "INSERT INTO " + evt.getTable() + " (id_etudiant,date_adhesion,liste_principale) VALUES " +
+    					"( " + e.getID() + 
+    					", '" + maintenant +
+    					"', FALSE)";
+    		}
+    		if (connexion.prepareStatement(query).executeUpdate() == 1 )
+    			if (query.compareTo("UPDATE " + evt.getTable() + " SET liste_principale = FALSE WHERE id_etudiant = " + e.getID()) == 0) {
+    				ResultSet r = connexion.prepareStatement("SELECT places_restantes FROM Evenement WHERE id = "+ evt.getID()).executeQuery();
+        			int restantes = 0;
+        			if (r.next()) restantes = r.getInt("places_restantes");
+        			connexion.prepareStatement("UPDATE Evenement SET places_restantes = " + (restantes+1));	
+    			}
+    			reussi = true;
 
       } catch (SQLException ex){
         System.out.println("SQLException: " + ex.getMessage());
