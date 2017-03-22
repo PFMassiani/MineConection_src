@@ -19,8 +19,7 @@ public class Etudiant extends Utilisateur {
   private static final long serialVersionUID = 1028926935677583162L;
   private String nom, prenom, telephone;
   private int promo;
-  //  Date naissance;
-  //  Calendrier calendrier;
+  Calendrier calendrier;
   
   private static DAEtudiant dae = new DAEtudiant();
   
@@ -36,6 +35,8 @@ public class Etudiant extends Utilisateur {
     prenom = p;
     promo = pr;
     telephone = t;
+    
+    calendrier = new Calendrier();
     
     dae.update(this);
     if (IDENTIFIANT == -1) throw new InvalidIDException("");
@@ -55,6 +56,18 @@ public class Etudiant extends Utilisateur {
     } catch (InvalidResultException ex) {
       System.out.println("InvalidResultException : " + ex.getMessage());
     }
+    
+    calendrier = Calendrier.charger(id);
+  }
+  
+  public Etudiant(share.utilisateur.Etudiant e) {
+	  super(e.getID());
+	  nom = e.getNom();
+	  prenom = e.getPrenom();
+	  telephone = e.getTelephone();
+	  promo = e.getPromo();
+	  
+	  calendrier = new Calendrier(e.getCalendrier());
   }
   
   //------------------------------------------------------------------------------------------------------------------------

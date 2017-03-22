@@ -271,7 +271,8 @@ public class Evenement extends Interaction {
 
 	}
 
-	public share.interaction.Evenement getEvenementClient(){
-		return new share.interaction.Evenement(IDENTIFIANT,nom,description,places,date,debutH,debutM,duree,new share.utilisateur.Etudiant(createur));
+	@Override
+	public share.interaction.Evenement getObjetClient(){
+		return new share.interaction.Evenement(IDENTIFIANT,nom,description,places,date,debutH,debutM,duree,createur.getObjetClient());
 	}
 }

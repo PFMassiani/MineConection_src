@@ -135,29 +135,31 @@ public class Evenement extends share.interaction.Interaction {
     placesUpdate = true;
   }
   
-  // TODO Reprendre la manière de faire des modifications à un objet:
-  //	- On modifie l'objet / la liste des participants depuis la classe client, et on update tout
-  // 	- On fait remonter la communication depuis la classe client jusqu'au serveur, et c'est lui qui s'occupe de tout
-  // 				---> À FAIRE
-  
   public boolean ajouterPrincipale(Etudiant e){
-	  if (push(e)) {
-		  attente.remove(e);
-		  principale.add(e);
-		  placesRestantes--;
-		  
-		  return true;
+
+	  boolean etaitSurAttente =  attente.remove(e);
+	  principale.add(e);
+	  placesRestantes--;
+	  boolean reussi = push();
+	  if (!reussi) {
+		  principale.remove(e);
+		  if(etaitSurAttente) attente.add(e);
+		  placesRestantes ++;
 	  }
-	  else return false;
+	  return reussi;
   }
   
   public boolean ajouterAttente(Etudiant e){
-	  if (push(e)) {
-		  if (principale.remove(e)) placesRestantes++;
-		  attente.add(e);
-		  return true;
+	  boolean etaitSurPrincipale =  principale.remove(e);
+	  attente.add(e);
+	  if (etaitSurPrincipale) placesRestantes ++;
+	  boolean reussi = push();
+	  if (!reussi) {
+		  attente.remove(e);
+		  if(etaitSurPrincipale) principale.add(e);
+		  placesRestantes --;
 	  }
-	  else return false;
+	  return reussi;
   }
   
   // Renvoie 0 si ok, 1 si attente, 2 si déjà dedans
@@ -180,7 +182,8 @@ public class Evenement extends share.interaction.Interaction {
 	  // TODO Affichage d'un événement
   }
   
-  private boolean push(Serializable b) {
+  @Override
+  protected boolean push() {
 	  try{
 		  Communication com = new Communication(TypeBackupable.EVENEMENT, Action.SAUVEGARDER,this);
 		  ConnexionServeur.getOOS().writeObject(com);

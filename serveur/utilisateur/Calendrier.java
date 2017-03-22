@@ -1,9 +1,11 @@
 package serveur.utilisateur;
 
 import java.util.*;
+
+import serveur.bdd.Backupable;
 import share.interaction.Evenement;
 
-public class Calendrier {
+public class Calendrier implements Backupable{
 	SortedSet<Evenement> principale;
 	SortedSet<Evenement> attente;
 	
@@ -14,13 +16,12 @@ public class Calendrier {
 	}
 	
 	public boolean ajouterPrincipale(Evenement evt) {
-		// Possibilité : découper la journée en plage horaires, et à chaque plage horaire, 
+		// Possibilité pour détecter facilement les conflits: découper la journée en plage horaires, et à chaque plage horaire, 
 		//	noter les événements qui l'occupent. Mais cela nécessite de repenser tout les 
 		//	événements
 		boolean reussi = false;
-		for ( Evenement e : principale ) 
-			if ( !e.equals(evt) && !evt.estCompatibleAvec(e) ) 
-				System.out.println("Attention : l'événement " + evt + " n'est pas compatible avec " + e);
+		for ( Evenement e : conflits(evt) ) 
+			System.out.println("Attention : l'événement " + evt + " n'est pas compatible avec " + e);
 		
 		reussi = principale.add(evt);
 		if (reussi && attente.remove(evt)) System.out.println("L'événement " + evt + " est passé de la liste d'attente à la liste principale");
@@ -36,7 +37,7 @@ public class Calendrier {
 				System.out.println("Attention : l'événement " + evt + " n'est pas compatible avec " + e);
 		
 		reussi = attente.add(evt);
-		if(reussi & principale.remove(evt)) System.out.println("L'événement " + evt + " est passé de la liste d'attente à la liste d'attente");
+		if(reussi & principale.remove(evt)) System.out.println("L'événement " + evt + " est passé de la liste d'attente à la liste principale");
 		
 		return attente.add(evt);
 	}
@@ -64,6 +65,10 @@ public class Calendrier {
 		return attente.remove(evt);
 	}
 	
+	public boolean supprimer(Evenement evt) {
+		return retirerPrincipale(evt) & !retirerAttente(evt);
+	}
+	
 	public void afficher() {
 		synchronized (System.out) {
 			Iterator<Evenement> it = principale.iterator();
@@ -87,6 +92,18 @@ public class Calendrier {
 			}
 			
 		}
+	}
+
+	@Override
+	public int getID() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public String getUpdate() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }
 

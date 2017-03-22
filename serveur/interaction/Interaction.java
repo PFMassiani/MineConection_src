@@ -1,6 +1,8 @@
 package serveur.interaction;
 
 import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Set;
 import java.util.HashSet;
 
@@ -47,7 +49,18 @@ public abstract class Interaction implements Backupable, Serializable {
     this(id,n,"",p,c);
   }
   public Interaction(share.interaction.Interaction inter) {
-	  this(inter.getID(),inter.getNom(),inter.getDescription(),inter.getPlaces(),inter.getCreateur());
+	  this(inter.getID(),inter.getNom(),inter.getDescription(),inter.getPlaces(),null);
+	  
+	  try {
+		  Class<?> classCrea = inter.getCreateur().getClass();
+		  Method objetServeur = classCrea.getDeclaredMethod("getObjetServeur",classCrea);
+		  createur = (Utilisateur) objetServeur.invoke(inter.getCreateur());
+	  } catch (InvocationTargetException | 
+			  IllegalAccessException |
+			  IllegalArgumentException |
+			  NoSuchMethodException ex) {
+		  System.out.println(ex.getMessage());
+	  }
   }
   
   public int getID(){
@@ -80,5 +93,6 @@ public abstract class Interaction implements Backupable, Serializable {
   public void setCreateur(Utilisateur c){
     createur = c;
   }
+  public abstract share.interaction.Interaction getObjetClient();
   
 }

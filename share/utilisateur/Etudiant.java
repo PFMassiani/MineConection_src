@@ -1,8 +1,14 @@
 package share.utilisateur;
 
+import java.io.IOException;
 import java.sql.*;
 
 import exception.*;
+import share.communication.Action;
+import share.communication.Communication;
+import share.communication.ConnexionServeur;
+import share.communication.TypeBackupable;
+import share.interaction.*;
 
 import java.util.Iterator;
 import java.util.Set;
@@ -13,14 +19,10 @@ public class Etudiant extends Utilisateur {
 	// ATTRIBUTS -------------------------------------------------------------------------------------------------------------
 	// -----------------------------------------------------------------------------------------------------------------------
 
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 1028926935677583162L;
 	private String nom, prenom, telephone;
 	private int promo;
-	//  Date naissance;
-	Calendrier calendrier;
+	private Calendrier calendrier;
 
 	//------------------------------------------------------------------------------------------------------------------------
 	// CONSTRUCTEURS ---------------------------------------------------------------------------------------------------------
@@ -61,18 +63,33 @@ public class Etudiant extends Utilisateur {
 		return calendrier;
 	}
 
-	public void setNom(String n){
+	public boolean setNom(String n){
+		String oldNom = nom;
 		nom = n;
+		boolean reussi = push();
+		if (!reussi) nom = oldNom;
+		return reussi;
 	}
-	public void setPrenom(String p){
+	public boolean setPrenom(String p){
+		String oldPrenom = prenom;
 		prenom = p;
+		boolean reussi = push();
+		if (!reussi) prenom = oldPrenom;
+		return reussi;
 	}
-	public void setTelephone(String t){
+	public boolean setTelephone(String t){
+		String oldTel = telephone;
 		telephone = t;
-	}
-	public void setPromo(int p){
+		boolean reussi = push();
+		if (!reussi) telephone = oldTel;
+		return reussi;
+		}
+	public boolean setPromo(int p){
+		int oldPromo = promo;
 		promo = p;
-	}
+		boolean reussi = push();
+		if (!reussi) promo = oldPromo;
+		return reussi;	}
 
 	//------------------------------------------------------------------------------------------------------------------------
 	// UTILITAIRE ------------------------------------------------------------------------------------------------------------
@@ -85,6 +102,17 @@ public class Etudiant extends Utilisateur {
 
 	// TODO Rejoindre un événement, en quitter un...
 	
+	public boolean participer(Evenement e) {
+		boolean surPrincipale = e.ajouter(this);
+		if (surPrincipale) calendrier.ajouterPrincipale();
+		else calendrier.ajouterAttente();
+		push();
+		return surPrincipale;
+	}
+	public void quitter(Evenement e) {
+		e.supprimerInscrit(this);
+		calendrier.supprimer(e);
+	}
 	@Override
 	public String toString(){
 		return "Étudiant n°" + IDENTIFIANT + ", " + prenom + " " + nom + " ( P " + promo + " )";
@@ -100,6 +128,19 @@ public class Etudiant extends Utilisateur {
 
 		Etudiant e = (Etudiant) o;
 		return e.getID() == IDENTIFIANT;
+	}
+
+	@Override
+	public boolean push() {
+		try {
+			Communication com = new Communication(TypeBackupable.ETUDIANT, Action.SAUVEGARDER, this);
+			ConnexionServeur.getOOS().writeObject(com);
+			
+			return ConnexionServeur.getIOS().readBoolean();
+		} catch(IOException | InvalidParameterException ex) {
+			System.out.println(ex.getMessage());
+		}
+		return false;
 	}
 
 }
