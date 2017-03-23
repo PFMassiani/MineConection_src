@@ -34,7 +34,7 @@ public class Evenement extends share.interaction.Interaction {
   // CONSTRUCTEURS ---------------------------------------------------------------------------------------------------------
   // -----------------------------------------------------------------------------------------------------------------------
   
-  public Evenement(int id,String nom, String description, int places, Date date, int debutH, int debutM, int duree, Utilisateur createur) {
+  public Evenement(int id,String nom, String description, int places, Date date, int debutH, int debutM, int duree, share.utilisateur.Utilisateur createur) {
     super(id,nom,description,places,createur);
 
     this.debutH = debutH + ((int) debutM / 60);

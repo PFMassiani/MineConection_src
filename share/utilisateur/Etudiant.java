@@ -100,12 +100,11 @@ public class Etudiant extends Utilisateur {
 	// EVENEMENTS ------------------------------------------------------------------------------------------------------------
 	// -----------------------------------------------------------------------------------------------------------------------
 
-	// TODO Rejoindre un événement, en quitter un...
 	
 	public boolean participer(Evenement e) {
 		boolean surPrincipale = e.ajouter(this);
-		if (surPrincipale) calendrier.ajouterPrincipale();
-		else calendrier.ajouterAttente();
+		if (surPrincipale) calendrier.ajouterPrincipale(e);
+		else calendrier.ajouterAttente(e);
 		push();
 		return surPrincipale;
 	}

@@ -22,4 +22,6 @@ public abstract class Utilisateur implements Backupable, Serializable {
     return IDENTIFIANT;
   }
   
+  public abstract share.utilisateur.Utilisateur getObjetClient();
+  
 }

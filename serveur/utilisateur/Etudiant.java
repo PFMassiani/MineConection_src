@@ -3,6 +3,7 @@ package serveur.utilisateur;
 import java.sql.*;
 
 import exception.*;
+import share.utilisateur.Calendrier;
 
 import java.util.Iterator;
 import java.util.Set;
@@ -21,7 +22,7 @@ public class Etudiant extends Utilisateur {
   private int promo;
   Calendrier calendrier;
   
-  private static DAEtudiant dae = new DAEtudiant();
+  private static volatile DAEtudiant dae = new DAEtudiant();
   
  //------------------------------------------------------------------------------------------------------------------------
  // CONSTRUCTEURS ---------------------------------------------------------------------------------------------------------
@@ -36,7 +37,7 @@ public class Etudiant extends Utilisateur {
     promo = pr;
     telephone = t;
     
-    calendrier = new Calendrier();
+    calendrier = new Calendrier(IDENTIFIANT);
     
     dae.update(this);
     if (IDENTIFIANT == -1) throw new InvalidIDException("");
@@ -57,7 +58,7 @@ public class Etudiant extends Utilisateur {
       System.out.println("InvalidResultException : " + ex.getMessage());
     }
     
-    calendrier = Calendrier.charger(id);
+    calendrier = Calendrier.charger(IDENTIFIANT);
   }
   
   public Etudiant(share.utilisateur.Etudiant e) {
@@ -67,7 +68,7 @@ public class Etudiant extends Utilisateur {
 	  telephone = e.getTelephone();
 	  promo = e.getPromo();
 	  
-	  calendrier = new Calendrier(e.getCalendrier());
+	  calendrier = e.getCalendrier();
   }
   
   //------------------------------------------------------------------------------------------------------------------------
@@ -92,15 +93,22 @@ public class Etudiant extends Utilisateur {
   
   public void setNom(String n){
     nom = n;
+    dae.update(this);
   }
   public void setPrenom(String p){
     prenom = p;
+    dae.update(this);
   }
   public void setTelephone(String t){
     telephone = t;
+    dae.update(this);
   }
   public void setPromo(int p){
     promo = p;
+    dae.update(this);
+  }
+  public boolean MAJ() {
+	  return dae.update(this) & calendrier.push();
   }
   
   //------------------------------------------------------------------------------------------------------------------------
@@ -227,5 +235,10 @@ public class Etudiant extends Utilisateur {
      Etudiant e = (Etudiant) o;
      return e.getID() == IDENTIFIANT;
    }
+
+@Override
+public share.utilisateur.Etudiant getObjetClient() {
+	return new share.utilisateur.Etudiant(IDENTIFIANT,nom,prenom,telephone,promo,calendrier);
+}
 
 }

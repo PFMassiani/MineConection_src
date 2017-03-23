@@ -1,10 +1,11 @@
 package share.communication;
 
 public enum TypeBackupable {
-  ETUDIANT("utilisateur.Etudiant"),
-  ASSOCIATION("utilisateur.Association"),
-  EVENEMENT("interaction.Evenement"),
-  PAPS("interaction.PAPS");
+  ETUDIANT("share.utilisateur.Etudiant"),
+  ASSOCIATION("share.utilisateur.Association"),
+  EVENEMENT("share.interaction.Evenement"),
+  PAPS("share.interaction.PAPS"),
+  CALENDRIER("share.utilisateur.Calendrier");
   
   private String nom;
   

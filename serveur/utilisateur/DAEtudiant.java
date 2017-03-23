@@ -23,5 +23,4 @@ class DAEtudiant extends DAO<Etudiant> {
   public Etudiant charger(ResultSet r) throws SQLException{
 	  return new Etudiant(r);
   }
-
 }

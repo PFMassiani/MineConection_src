@@ -18,4 +18,10 @@ public class Association extends Utilisateur {
     return null;
   }
 
+@Override
+public share.utilisateur.Utilisateur getObjetClient() {
+	// TODO Auto-generated method stub
+	return null;
+}
+
 }
