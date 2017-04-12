@@ -18,7 +18,13 @@ public class DACalendrier extends DAO<Calendrier>{
 	
 	@Override
 	public int getNewID() {
+		//TODO
 		return -1;
+	}
+	@Override
+	public String getUpdate(Calendrier c) {
+		//TODO
+		return "";
 	}
 	
 	@Override
@@ -94,8 +100,8 @@ public class DACalendrier extends DAO<Calendrier>{
 		try {
 			ResultSet r = Connexion.getConnection().prepareStatement("SELECT * FROM cal_" + id).executeQuery();
 			while (r.next()) {
-				if(r.getBoolean("liste_principale")) cal.ajouterPrincipale(serveur.interaction.Evenement.chercher(r.getInt("id_evenement")).getObjetClient());
-				else cal.ajouterAttente(serveur.interaction.Evenement.chercher(r.getInt("id_evenement")).getObjetClient());
+				if(r.getBoolean("liste_principale")) cal.ajouterPrincipale(share.interaction.Evenement.chercher(r.getInt("id_evenement")));
+				else cal.ajouterAttente(share.interaction.Evenement.chercher(r.getInt("id_evenement")));
 			}
 		} catch (SQLException ex){
 			System.out.println("SQLException: " + ex.getMessage());

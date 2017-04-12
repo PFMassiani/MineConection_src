@@ -1,10 +1,8 @@
 package share.utilisateur;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -177,11 +175,6 @@ public class Calendrier implements Backupable{
 	@Override
 	public int getID() {
 		return IDENTIFIANT;
-	}
-
-	@Override
-	public String getUpdate() {
-		return "";
 	}
 	
 	public static Calendrier charger(int id) {

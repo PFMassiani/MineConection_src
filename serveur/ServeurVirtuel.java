@@ -61,23 +61,26 @@ public class ServeurVirtuel extends Thread {
           System.out.println("Récupération de l'action...");
           Action action = com.getAction();
           switch (action){
+
+          case NOUVEAU:
+        	  com.setID(nouveau(com.getType()));        	  
           case CHARGER:
-            envoyerObjet(com.getType(), com.getID());
-            break;
+        	  envoyerObjet(com.getType(), com.getID());
+        	  break;
           case SAUVEGARDER:
-            sauvegarderObjet(com.getObjet());
-            break;
+        	  sauvegarderObjet(com.getObjet());
+        	  break;
           case SUPPRIMER:
-            supprimer(com);
-            break;
+        	  supprimer(com);
+        	  break;
           case GET_IDS:
-            envoyerIDs(com.getType());
-            break;
+        	  envoyerIDs(com.getType());
+        	  break;
           case GET_ALL:
-            envoyerAll(com.getType());
-            break;
-            default:
-              break;
+        	  envoyerAll(com.getType());
+        	  break;
+          default:
+        	  break;
           }
         } catch (ClassNotFoundException e){
           e.printStackTrace();
@@ -163,6 +166,28 @@ public class ServeurVirtuel extends Thread {
 	  return reussi;
   }
  
+  public int nouveau (TypeBackupable type) {
+	  int id = -1;
+	  Class<?> c = null;
+
+	  try {
+		  c = Class.forName(type.getNomClasse());
+		  Method m = c.getDeclaredMethod("getNewID");
+
+		  id = (int) m.invoke(null);
+		  
+	  } catch (ClassNotFoundException | 
+			  IllegalAccessException | 
+			  IllegalArgumentException | 
+			  InvocationTargetException e){
+		  e.printStackTrace();
+	  } catch (NoSuchMethodException e){
+		  System.err.println("Erreur: la classe " + c.getName() + " n'implémente pas la méthode static Set<Integer> supprimer()");
+		  e.printStackTrace();
+	  }
+
+	  return id;
+  }
 
   public void envoyerIDs (TypeBackupable type){
     Class<?> c = null;

@@ -117,7 +117,7 @@ public abstract class DAO<T extends Backupable> {
         ResultSet r = connexion.createStatement().executeQuery("SELECT * FROM " + table + " WHERE " + champPrimaire + " = " + obj.getID());
         
         if (r.next()){
-          String query = "UPDATE " + table + " SET " + obj.getUpdate() + " WHERE " + champPrimaire + " = " + obj.getID() ;
+          String query = "UPDATE " + table + " SET " + getUpdate(obj) + " WHERE " + champPrimaire + " = " + obj.getID() ;
           connexion.prepareStatement(query).executeUpdate();
           
           reussi = true;
@@ -166,5 +166,6 @@ public abstract class DAO<T extends Backupable> {
   }
   
   public abstract T charger(ResultSet r) throws SQLException;
+  public abstract String getUpdate(T t);
   
 }

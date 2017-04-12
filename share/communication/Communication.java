@@ -42,7 +42,25 @@ public class Communication implements Serializable{
       break;
     }
   }
+  
+  public Communication(TypeBackupable type, Action action) throws InvalidParameterException{
+	  this.type = type;
+	  this.action = action;
+	  o = null;
+	  id = -1;
+	  switch (action) {
+	  case NOUVEAU:
+	  case GET_IDS:
+	  case GET_ALL:
+		  break;
+	  default:
+		  throw new InvalidParameterException("L'action doit être NOUVEAU ( action = " + action + " )");
+	  }
+  }
 
+  public void setID(int id) {
+	  this.id = id;
+  }
   public TypeBackupable getType(){
     return type;
   }

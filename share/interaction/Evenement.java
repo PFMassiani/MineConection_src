@@ -1,10 +1,8 @@
 package share.interaction;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.sql.*;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 
 import exception.*;
@@ -27,7 +25,6 @@ public class Evenement extends share.interaction.Interaction {
   private Date date;
   private int debutH, debutM, duree;
   
-  private static Set<Integer> ids;
   private Set<Etudiant> principale,attente;
   
   //------------------------------------------------------------------------------------------------------------------------
@@ -45,6 +42,7 @@ public class Evenement extends share.interaction.Interaction {
     this.date.setTime(this.date.getTime() + nbJours * 24 * 60 * 60 * 10000);
     this.duree = duree;
     if (IDENTIFIANT == -1) throw new InvalidIDException("");
+    push();
   }
   
   //------------------------------------------------------------------------------------------------------------------------
@@ -52,12 +50,15 @@ public class Evenement extends share.interaction.Interaction {
   // -----------------------------------------------------------------------------------------------------------------------
   
   public Date getDebut(){
+	pull();
     return date;
   }
   public int getDuree(){
-    return duree;
+	  pull();
+	  return duree;
   }
   public String getDureeHM(){
+	  pull();
     int h = (int) (duree / 60);
     int m = (int) duree - 60 * h;
     String s = "";
@@ -66,20 +67,26 @@ public class Evenement extends share.interaction.Interaction {
     return s;
   }
   public long getFin(){
+	  pull();
     return date.getTime() + ( ( debutH * 60 ) + debutM ) * 60 * 1000 ;
   }
-  public static Set<Integer> ids(){
-    return ids;
-  }
+  //TODO
+//  public static Set<Integer> ids(){
+//	pull();
+//    return ids;
+//  }
   public Set<Etudiant> principale(){
+	pull();
     return principale;
   }
   public Set<Etudiant> inscrits(){
+	pull();
 	Set<Etudiant> inscrits = new HashSet<>(principale);
 	inscrits.addAll(attente);
     return inscrits;
   }
   public Set<Etudiant> attente(){
+	  pull();
 	  return attente;
   }
   
@@ -93,6 +100,7 @@ public class Evenement extends share.interaction.Interaction {
   
   @Override
   public boolean equals(Object o){
+	  pull();
     if (!(o instanceof Evenement)) return false;
     Evenement evt = (Evenement) o;
     return evt.getID() == IDENTIFIANT;
@@ -105,6 +113,7 @@ public class Evenement extends share.interaction.Interaction {
   // TODO Recherche par nom
   
   public boolean estCompatibleAvec(Evenement evt){
+	  pull();
     Evenement premier, deuxieme;
     if (date.before(evt.date)){
       premier = this;
@@ -122,20 +131,26 @@ public class Evenement extends share.interaction.Interaction {
   }
   
   public boolean participe(Etudiant e){
+	  pull();
     return principale().contains(e);
   }
   
   public boolean estInscrit(Etudiant e){
+	  pull();
     return inscrits().contains(e);
   }
   
-  public void setPlaces(int places){
+  public boolean setPlaces(int places){
+	  pull();
     this.places = places;
-    placesRestantes = places - ids().size();
-    placesUpdate = true;
+    placesRestantes = places - principale.size();
+    boolean reussi = push();
+    if (placesRestantes < 0) placesRestantes = 0;
+    return reussi;
   }
   
   public boolean ajouterPrincipale(Etudiant e){
+	  pull();
 
 	  boolean etaitSurAttente =  attente.remove(e);
 	  principale.add(e);
@@ -150,6 +165,7 @@ public class Evenement extends share.interaction.Interaction {
   }
   
   public boolean ajouterAttente(Etudiant e){
+	  pull();
 	  boolean etaitSurPrincipale =  principale.remove(e);
 	  attente.add(e);
 	  if (etaitSurPrincipale) placesRestantes ++;
@@ -162,15 +178,17 @@ public class Evenement extends share.interaction.Interaction {
 	  return reussi;
   }
   
-  // Renvoie 0 si ok, 1 si attente, 2 si déjà dedans
   public boolean ajouter(Etudiant e){
+	  pull();
 	  boolean reussi = false;
     if (!(reussi = ajouterPrincipale(e))) reussi = ajouterAttente(e);
     return reussi;
   }
   
-  public void supprimerInscrit(Etudiant e){
+  public boolean supprimerInscrit(Etudiant e){
+	  pull();
 	  if(!principale.remove(e)) attente.remove(e);
+	  return push();
   }
   
   public static Evenement getRandomEvent() {
@@ -180,6 +198,7 @@ public class Evenement extends share.interaction.Interaction {
 
   public void afficher() {
 	  // TODO Affichage d'un événement
+	  System.out.println("AFFICHAGE ÉVÉNEMENT");
   }
   
   @Override
@@ -193,14 +212,110 @@ public class Evenement extends share.interaction.Interaction {
 	  }
 	  return false;
   }
+  
+  protected void pull() {
+	  try{
+		  Communication com = new Communication(TypeBackupable.EVENEMENT, Action.CHARGER,this);
+		  ConnexionServeur.getOOS().writeObject(com);
+		  Object o =  ConnexionServeur.getIOS().readObject();
+		  if (!(o instanceof Evenement)) throw new InvalidCommunicationException("La communication n'a pas renvoyé un Evenement");
+		  Evenement e = (Evenement) o;
+		  if (IDENTIFIANT != e.getID()) throw new InvalidIDException("L'identifiant de l'événement chargé ne correspond pas à celui de l'événement courant");
+		  
+		  nom = e.nom;
+		  description = e.description;
+		  places = e.places;
+		  placesRestantes = e.placesRestantes;
+		  createur = e.createur;
+		  date = e.date;
+		  debutH = e.debutH;
+		  debutM = e.debutM;
+		  duree = e.duree;
+		  principale = e.principale;
+		  attente = e.attente();
+		  
+	  } catch (InvalidParameterException | IOException | InvalidCommunicationException | InvalidIDException | ClassNotFoundException ex) {
+		  System.out.println(ex.getMessage());
+	  }
+  }
 
   public int getDebutH() {
+	  pull();
 	  return debutH;
   }
   public int getDebutM() {
+	  pull();
 	  return debutM;
   }
   public Date getDate() {
+	  pull();
 	  return date;
   }
+  public static Evenement chercher(int id) {
+	  try {
+		  Communication com = new Communication(TypeBackupable.EVENEMENT, Action.CHARGER,id);
+		  ConnexionServeur.getOOS().writeObject(com);
+		  Object o =  ConnexionServeur.getIOS().readObject();
+		  if (!(o instanceof Evenement)) throw new InvalidCommunicationException("La communication n'a pas renvoyé un Evenement");
+		  return (Evenement) o;
+	  } catch (InvalidCommunicationException | IOException | ClassNotFoundException | InvalidParameterException ex) {
+		  System.out.println(ex.getMessage());
+	  }
+	  
+	  return null;
+  }
+
+public String getNomClient() {
+return nom;
+}
+
+public String getDescriptionClient() {
+	return description;
+}
+
+public int getPlacesClient() {
+	return places;
+}
+public int getPlacesRestantesClient() {
+	return placesRestantes;
+}
+
+public Date getDateClient() {
+	return date;
+}
+
+public int getDureeClient() {
+	return duree;
+}
+public int getDebutHClient() {
+	return debutH;
+}
+public int getDebutMClient() {
+	return debutM;
+}
+public Utilisateur getCreateurClient() {
+	return createur;
+}
+public Set<Etudiant> inscritsClient(){
+	Set<Etudiant> inscrits = new HashSet<>(principale);
+	inscrits.addAll(attente);
+    return inscrits;
+}
+public Set<Etudiant> principaleClient(){
+	return principale;
+}
+public static Evenement nouveau(String nom, String description, int places, Date date, int debutH, int debutM, int duree, share.utilisateur.Utilisateur createur) {
+	Evenement evt = null;
+	
+	try {
+		Communication com = new Communication(TypeBackupable.EVENEMENT, Action.NOUVEAU);
+		ConnexionServeur.getOOS().writeObject(com);
+		Object o = ConnexionServeur.getIOS().readObject();
+		if (!(o instanceof Evenement)) throw new InvalidCommunicationException("La communication n'a pas renvoyé un Evenement");
+		evt = (Evenement) o;
+	} catch (InvalidCommunicationException | IOException | ClassNotFoundException | InvalidParameterException ex) {
+		  System.out.println(ex.getMessage());
+	}
+	return new Evenement(evt.getID(),nom,description,places,date,debutH,debutM,duree,createur);
+}
 }

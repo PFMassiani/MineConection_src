@@ -7,8 +7,8 @@ import java.net.Socket;
 import java.sql.Date;
 import java.sql.ResultSet;
 
-import serveur.interaction.Evenement;
-import serveur.utilisateur.Etudiant;
+import share.interaction.Evenement;
+import share.utilisateur.Etudiant;
 import share.communication.Action;
 import share.communication.Communication;
 import share.communication.TypeBackupable;
@@ -30,7 +30,7 @@ public class Test {
 		int promo = 16;
 
 		for (int i = 0; i < 4; i++){
-			new Etudiant(nom[i],prenom[i],numeros[i],promo); 
+			Etudiant.nouveau(nom[i],prenom[i],numeros[i],promo); 
 		}
 		System.out.println("Table remplie !");
 	}

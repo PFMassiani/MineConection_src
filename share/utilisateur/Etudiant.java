@@ -1,7 +1,8 @@
 package share.utilisateur;
 
 import java.io.IOException;
-import java.sql.*;
+import java.sql.Date;
+import java.util.*;
 
 import exception.*;
 import share.communication.Action;
@@ -9,9 +10,6 @@ import share.communication.Communication;
 import share.communication.ConnexionServeur;
 import share.communication.TypeBackupable;
 import share.interaction.*;
-
-import java.util.Iterator;
-import java.util.Set;
 
 public class Etudiant extends Utilisateur {
 
@@ -141,5 +139,57 @@ public class Etudiant extends Utilisateur {
 		}
 		return false;
 	}
-
+	
+	public static Etudiant chercher(int id) {
+		try {
+			  Communication com = new Communication(TypeBackupable.ETUDIANT, Action.CHARGER,id);
+			  ConnexionServeur.getOOS().writeObject(com);
+			  Object o =  ConnexionServeur.getIOS().readObject();
+			  if (!(o instanceof Etudiant)) throw new InvalidCommunicationException("La communication n'a pas renvoyé un Etudiant");
+			  return (Etudiant) o;
+		  } catch (InvalidCommunicationException | IOException | ClassNotFoundException | InvalidParameterException ex) {
+			  System.out.println(ex.getMessage());
+		  }
+		  
+		return null;
+	}
+	public static Etudiant nouveau(String n, String p, String t, int pr) {
+		Etudiant e = null;
+		
+		try {
+			Communication com = new Communication(TypeBackupable.ETUDIANT, Action.NOUVEAU);
+			ConnexionServeur.getOOS().writeObject(com);
+			Object o = ConnexionServeur.getIOS().readObject();
+			if (!(o instanceof Etudiant)) throw new InvalidCommunicationException("La communication n'a pas renvoyé un Etudiant");
+			e = (Etudiant) o;
+		} catch (InvalidCommunicationException | IOException | ClassNotFoundException | InvalidParameterException ex) {
+			  System.out.println(ex.getMessage());
+		}
+		e.setNom(n);
+		e.setPrenom(p);
+		e.setTelephone(t);
+		e.setPromo(pr);
+		e.calendrier = Calendrier.charger(e.getID());
+		return e;
+	}
+	
+	public static Set<Integer> ids(){
+		Set<Integer> ids = new HashSet<>();
+		
+		try {
+			Communication com = new Communication (TypeBackupable.ETUDIANT, Action.GET_IDS);
+			ConnexionServeur.getOOS().writeObject(com);
+			Object o = ConnexionServeur.getIOS().readObject();
+			if (!(o instanceof Set)) throw new InvalidCommunicationException("La communication n'a pas renvoyé un ensemble");
+			Set s = (Set) o;
+			if (!s.isEmpty()) {
+				o = s.toArray()[0];
+				if (!(o instanceof Integer)) throw new InvalidCommunicationException("La communication n'a pas renvoyé l'ensemble des identifiants");
+				ids = (Set<Integer>) o;
+			}
+		} catch (InvalidCommunicationException | IOException | ClassNotFoundException | InvalidParameterException ex) {
+			  System.out.println(ex.getMessage());
+		}
+		return ids;
+	}
 }

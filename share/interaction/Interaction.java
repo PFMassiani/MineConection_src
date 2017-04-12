@@ -1,13 +1,11 @@
 package share.interaction;
 
-import java.io.Serializable;
-
 import serveur.bdd.Backupable;
 import share.utilisateur.Utilisateur;
 
 // Classe mère de PAPS et de Evenement
 
-public abstract class Interaction implements Serializable {
+public abstract class Interaction implements Backupable {
 
 	/**
 	 * 
@@ -40,6 +38,7 @@ public abstract class Interaction implements Serializable {
 		this(id,n,"",p,c);
 	}
 
+	@Override
 	public int getID(){
 		return IDENTIFIANT;
 	}
