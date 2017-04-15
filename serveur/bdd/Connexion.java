@@ -18,7 +18,7 @@ public class Connexion {
   private Connexion(){
 	
 	try {
-		FileReader psswd = new FileReader("password.txt");
+		FileReader psswd = new FileReader("/home/pierre-francois/Documents/Mines/Projets/Info/MineConnection/Code/bin/serveur/bdd/password.txt");
 		Scanner sc = new Scanner(psswd);
 		password = sc.nextLine();
 		sc.close();
@@ -44,7 +44,6 @@ public class Connexion {
   
   public static synchronized Connection getConnection(){
     if (connexion == null) new Connexion();
-    else System.out.println("Connexion récupérée !");
     return connexion;
   }
 }

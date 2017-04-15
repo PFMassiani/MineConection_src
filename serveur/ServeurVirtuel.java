@@ -50,6 +50,7 @@ public class ServeurVirtuel extends Thread {
   
   @Override
   public void run(){
+	  System.out.println("Serveur Virtuel - Thread " + Thread.currentThread());
 	  int tours = 0;
     while (!fin && tours < 1){
       if (!pause){
@@ -63,12 +64,13 @@ public class ServeurVirtuel extends Thread {
           switch (action){
 
           case NOUVEAU:
-        	  com.setID(nouveau(com.getType()));        	  
+        	  com.setID(nouveau(com)); 
+        	  break;
           case CHARGER:
         	  envoyerObjet(com.getType(), com.getID());
         	  break;
           case SAUVEGARDER:
-        	  sauvegarderObjet(com.getObjet());
+        	  sauvegarderObjet(com.getObjet(),com.getType());
         	  break;
           case SUPPRIMER:
         	  supprimer(com);
@@ -96,41 +98,48 @@ public class ServeurVirtuel extends Thread {
   public void envoyerObjet(TypeBackupable type, int id){
     Class<?> c = null;
     try{
-      c = Class.forName(type.getNomClasse());
-      Method m = c.getDeclaredMethod("chercher", int.class);
+      c = Class.forName(type.getNomDAO());
+      Method m = c.getMethod("chercher", int.class);
       
-      Object retour = m.invoke(null, id);
+      Object retour = m.invoke(type.getDAO(), id);
       
-      oos.writeObject(c.cast(retour));
+      oos.writeObject(Class.forName(type.getNomClasse()).cast(retour));
       
     } catch (ClassNotFoundException| IllegalAccessException | IllegalArgumentException | InvocationTargetException | IOException e){
       e.printStackTrace();
     } catch (NoSuchMethodException e){
-      System.err.println("La classe " + c + " n'implémente pas la méthode ? chercher(int id)");
+      System.err.println("La classe " + c + " n'implémente pas la méthode chercher(int id)");
       e.printStackTrace();
     }
   }
   
-  public boolean sauvegarderObjet(Object o){
+  public void sauvegarderObjet(Object o, TypeBackupable type){
     boolean reussi = false;
     
-    Class<?> c = o.getClass();
+
     try {
+        Class<?> cDAO = Class.forName(type.getNomDAO());
+        Class<?> c = Class.forName(type.getNomClasse());
+
+//        // TODO Accepter en argument un backupable
+    	Method m = cDAO.getMethod("update",Class.forName("serveur.bdd.Backupable"));
+    	reussi = (boolean) m.invoke(type.getDAO(),c.cast(o));
     	
-    	Method m = c.getDeclaredMethod("update");
-    	m.invoke(c.cast(o));
+    	oos.writeObject(reussi);
     	
     } catch (NoSuchMethodException | 
     		IllegalAccessException | 
     		IllegalArgumentException | 
+    		ClassNotFoundException |
+    		IOException |
     		InvocationTargetException ex) {
-    	ex.printStackTrace();
+    	System.out.println("EXCEPTION LANCÉE");
+		System.out.println(ex.getClass());
+		System.out.println(ex.getMessage());
     }
-    
-    return reussi;
   }
   
-  public boolean supprimer (Communication com){
+  public void supprimer (Communication com){
 	  boolean reussi = false;
 	  System.out.println("Suppression en cours...");
 	  Backupable o = com.getObjetBackupable();
@@ -138,51 +147,61 @@ public class ServeurVirtuel extends Thread {
 	  
 	  try {
 		  // On récupère la classe de o
+		  Class<?> cDAO = Class.forName(com.getType().getNomDAO());
 		  Class<?> c = Class.forName(com.getType().getNomClasse());
-		  System.out.println("-----> Classe de l'objet :" + c);
+		  System.out.println("-----> Classe du DAO :" + c);
+		  System.out.println("-----> Objet : " + o);
+		  System.out.println("-----> ID de l'objet : " + com.getID());
 		  // On récupère la méthode supprimer()
 		  Method m;
-		  if ( o != null) m = c.getDeclaredMethod("supprimer");
-		  else m = c.getDeclaredMethod("supprimer", int.class);
+		  if ( o != null) m = cDAO.getMethod("supprimer",Class.forName("serveur.bdd.Backupable"));
+		  else m = cDAO.getMethod("supprimer", int.class);
 		  System.out.println("-----> Méthode de suppression :" + m);
 
 
 		  // Et si on la trouve, on l'applique
-		  if (o != null) reussi = (boolean) m.invoke(c.cast(o));
-		  else reussi = (boolean) m.invoke(null,com.getID());
+		  if (o != null) reussi = (boolean) m.invoke(com.getType().getDAO(),com.getObjet());
+		  else reussi = (boolean) m.invoke(com.getType().getDAO(),com.getID());
 
 		  System.out.println("-----> Réussite :" + reussi);
+		  oos.writeObject(reussi);
 
 	  } catch (NoSuchMethodException | 
 			  IllegalAccessException | 
 			  IllegalArgumentException | 
-			  InvocationTargetException | ClassNotFoundException e) {
+			  InvocationTargetException | ClassNotFoundException | IOException e) {
 
 		  e.printStackTrace();
 	  }
-
-
-
-	  return reussi;
   }
  
-  public int nouveau (TypeBackupable type) {
+  public int nouveau (Communication com) {
 	  int id = -1;
-	  Class<?> c = null;
+	  TypeBackupable type = com.getType();
+	  Class<?> cDAO = null, c = null;
 
 	  try {
+		  cDAO = Class.forName(type.getNomDAO());
 		  c = Class.forName(type.getNomClasse());
-		  Method m = c.getDeclaredMethod("getNewID");
-
-		  id = (int) m.invoke(null);
+		  Method m = cDAO.getDeclaredMethod("getNewID");
+		  id = (int) m.invoke(type.getDAO());
+		  
+		  m = c.getMethod("setIdentifiant", int.class);
+		  Object o = m.invoke(c.cast(com.getObjet()), id);
+		  
+		  m = cDAO.getMethod("update",c);
+		  m.invoke(type.getDAO(), c.cast(o));
+		  
+		  oos.writeObject(c.cast(o));
 		  
 	  } catch (ClassNotFoundException | 
 			  IllegalAccessException | 
 			  IllegalArgumentException | 
+			  IOException |
 			  InvocationTargetException e){
 		  e.printStackTrace();
 	  } catch (NoSuchMethodException e){
-		  System.err.println("Erreur: la classe " + c.getName() + " n'implémente pas la méthode static Set<Integer> supprimer()");
+		  System.err.println("Erreur: la classe " + c.getName() + " n'implémente pas la méthode getNewID()");
 		  e.printStackTrace();
 	  }
 
@@ -193,9 +212,9 @@ public class ServeurVirtuel extends Thread {
     Class<?> c = null;
     try{
 
-      c = Class.forName(type.getNomClasse());
-      Method m = c.getDeclaredMethod("ids");
-      Set<?> ids = (Set<?>) m.invoke(null);
+      c = Class.forName(type.getNomDAO());
+      Method m = c.getMethod("ids");
+      Set<?> ids = (Set<?>) m.invoke(type.getDAO());
 
       oos.writeObject(ids);
 
@@ -205,7 +224,7 @@ public class ServeurVirtuel extends Thread {
         InvocationTargetException e){
       e.printStackTrace();
     } catch (NoSuchMethodException e){
-      System.err.println("Erreur: la classe " + c.getName() + " n'implémente pas la méthode static Set<Integer> supprimer()");
+      System.err.println("Erreur: la classe " + c.getName() + " n'implémente pas la méthode static Set<Integer> ids()");
       e.printStackTrace();
     } catch (IOException e){
       e.printStackTrace();
@@ -216,9 +235,9 @@ public class ServeurVirtuel extends Thread {
     Class<?> c = null;
     try{
 
-      c = Class.forName(type.getNomClasse());
-      Method m = c.getDeclaredMethod("getAll");
-      Set<?> all = (Set<?>) m.invoke(null);
+      c = Class.forName(type.getNomDAO());
+      Method m = c.getMethod("getAll");
+      Set<?> all = (Set<?>) m.invoke(type.getDAO());
 
       oos.writeObject(all);
 

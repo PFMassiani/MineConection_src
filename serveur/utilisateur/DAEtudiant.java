@@ -27,11 +27,11 @@ public class DAEtudiant extends DAO<Etudiant> {
   @Override
   public Etudiant charger(ResultSet r) throws SQLException{
 	  Etudiant e = null;
-	  if (r.next()) {
+	  if (r.getRow() != 0) {
 		  try {
 			  ResultSetMetaData rMeta = r.getMetaData();
 			  if (rMeta.getTableName(1).compareTo("Etudiant") != 0) throw new InvalidResultException("Le résultat ne contient pas un étudiant");
-			  e = new Etudiant(r.getInt("id"),r.getString("nom"),r.getString("prenom"),r.getString("telephone"),r.getInt("promo"),Calendrier.charger(r.getInt("id")));
+			  e = new Etudiant(r.getInt("id"),r.getString("nom"),r.getString("prenom"),r.getString("telephone"),r.getInt("promotion"),Calendrier.charger(r.getInt("id")));
 		  } catch (InvalidResultException ex) {
 			  System.err.println(ex.getMessage());
 		  }

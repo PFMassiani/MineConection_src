@@ -86,7 +86,8 @@ public class DAEvenement extends DAO<Evenement> {
   @Override
   public Evenement charger(ResultSet r) throws SQLException{
 	  share.utilisateur.Utilisateur createur = null;
-	  if (r.getBoolean("createur_est_etudiant") == true) createur = share.utilisateur.Etudiant.chercher(r.getInt("createur_etudiant_id"));
+	  DAEtudiant dae = new DAEtudiant();
+	  if (r.getBoolean("createur_est_etudiant") == true) createur = dae.chercher(r.getInt("createur_etudiant_id"));
 //	  else createur = Association.chercher(r.getInt("createur_association_id"));
 
 	  return new Evenement(r.getInt("id"),r.getString("nom"),r.getString("description"),r.getInt("places"),r.getDate("date"),r.getInt("debut_h"),r.getInt("debut_m"),r.getInt("duree"),createur);

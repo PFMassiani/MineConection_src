@@ -1,5 +1,6 @@
 package share.utilisateur;
 
+import java.io.Serializable;
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.Date;
@@ -170,6 +171,7 @@ public class Calendrier implements Backupable{
 				ClassNotFoundException ex) {
 			System.err.println(ex.getMessage());
 		}
+		
 	}
 
 	@Override
@@ -182,13 +184,21 @@ public class Calendrier implements Backupable{
 		cal.pull();
 		return cal;
 	}
+	@Override
+	 public Calendrier setIdentifiant(int id){
+		 Calendrier cal = new Calendrier(id);
+		 cal.principale = principale;
+		 cal.attente = attente;
+		 return cal;
+	 }
 }
 
-class ComparateurEvt implements Comparator<Evenement> {
+class ComparateurEvt implements Comparator<Evenement>,Serializable {
 
 	@Override
 	public int compare(Evenement e1, Evenement e2) {
 		return (int) (e1.getDebut().getTime() - e2.getDebut().getTime());
 	}
+	
 	
 }

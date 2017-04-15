@@ -3,6 +3,7 @@ package share.interaction;
 import java.io.IOException;
 import java.sql.*;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 
 import exception.*;
@@ -33,16 +34,16 @@ public class Evenement extends share.interaction.Interaction {
   
   public Evenement(int id,String nom, String description, int places, Date date, int debutH, int debutM, int duree, share.utilisateur.Utilisateur createur) {
     super(id,nom,description,places,createur);
-
+    principale = new HashSet<Etudiant>();
+    attente = new HashSet<Etudiant>();
     this.debutH = debutH + ((int) debutM / 60);
     this.debutM = debutM % 60;
     int nbJours = (int) (debutH / 24);
     debutH %= 24;
     this.date = date;
+    if ( this.date == null ) this.date = new java.sql.Date((new java.util.Date()).getTime());
     this.date.setTime(this.date.getTime() + nbJours * 24 * 60 * 60 * 10000);
     this.duree = duree;
-    if (IDENTIFIANT == -1) throw new InvalidIDException("");
-    push();
   }
   
   //------------------------------------------------------------------------------------------------------------------------
@@ -192,8 +193,15 @@ public class Evenement extends share.interaction.Interaction {
   }
   
   public static Evenement getRandomEvent() {
-	  // TODO
-	  return null;
+		Set<Evenement> evts = getAll();
+		if (evts.isEmpty()) return null;
+		int i = ((int) (Math.random() * evts.size()));
+		Iterator<Evenement> it = evts.iterator();
+		for (int j = 0; j < i-1; j++) it.next();
+		
+		return it.next();
+		
+	
   }
 
   public void afficher() {
@@ -206,9 +214,12 @@ public class Evenement extends share.interaction.Interaction {
 	  try{
 		  Communication com = new Communication(TypeBackupable.EVENEMENT, Action.SAUVEGARDER,this);
 		  ConnexionServeur.getOOS().writeObject(com);
-		  return ConnexionServeur.getIOS().readBoolean();
-	  } catch (InvalidParameterException | IOException ex) {
-		  System.out.println(ex.getMessage());
+		  Object reussi = ConnexionServeur.getIOS().readObject();
+		  if (!(reussi instanceof Boolean)) throw new InvalidCommunicationException("Le serveur n'a pas renvoyé un booléen");
+		  return (boolean) reussi;
+	  } catch (InvalidParameterException | IOException | ClassNotFoundException | InvalidCommunicationException ex) {
+		  System.out.println(ex.toString());
+		  ex.printStackTrace();
 	  }
 	  return false;
   }
@@ -305,10 +316,11 @@ public Set<Etudiant> principaleClient(){
 	return principale;
 }
 public static Evenement nouveau(String nom, String description, int places, Date date, int debutH, int debutM, int duree, share.utilisateur.Utilisateur createur) {
-	Evenement evt = null;
+	Evenement evt = new Evenement(-1,nom,description,places,date,debutH,debutM,duree,createur);
+
 	
 	try {
-		Communication com = new Communication(TypeBackupable.EVENEMENT, Action.NOUVEAU);
+		Communication com = new Communication(TypeBackupable.EVENEMENT, Action.NOUVEAU,evt);
 		ConnexionServeur.getOOS().writeObject(com);
 		Object o = ConnexionServeur.getIOS().readObject();
 		if (!(o instanceof Evenement)) throw new InvalidCommunicationException("La communication n'a pas renvoyé un Evenement");
@@ -316,6 +328,77 @@ public static Evenement nouveau(String nom, String description, int places, Date
 	} catch (InvalidCommunicationException | IOException | ClassNotFoundException | InvalidParameterException ex) {
 		  System.out.println(ex.getMessage());
 	}
-	return new Evenement(evt.getID(),nom,description,places,date,debutH,debutM,duree,createur);
+	return evt;
+}
+public static Set<Integer> ids(){
+	Set<Integer> ids = new HashSet<>();
+	
+	try {
+		Communication com = new Communication (TypeBackupable.EVENEMENT, Action.GET_IDS);
+		ConnexionServeur.getOOS().writeObject(com);
+		Object o = ConnexionServeur.getIOS().readObject();
+		if (!(o instanceof Set)) throw new InvalidCommunicationException("La communication n'a pas renvoyé un ensemble");
+		Set s = (Set) o;
+		if (!s.isEmpty()) {
+			o = s.toArray()[0];
+			if (!(o instanceof Integer)) throw new InvalidCommunicationException("La communication n'a pas renvoyé l'ensemble des identifiants");
+			ids = (Set<Integer>) s;
+		}
+	} catch (InvalidCommunicationException | IOException | ClassNotFoundException | InvalidParameterException ex) {
+		  System.out.println(ex.getMessage());
+	}
+	return ids;
+}
+
+public static boolean supprimer(int id) {
+	boolean reussi = false;
+	try {
+		Communication com = new Communication(TypeBackupable.EVENEMENT, Action.SUPPRIMER,id);
+		ConnexionServeur.getOOS().writeObject(com);
+		Object o = ConnexionServeur.getIOS().readObject();
+		if ( !(o instanceof Boolean )) throw new InvalidCommunicationException("La communication n'a pas renvoyé d'information sur la réussite de la suppression");
+		reussi = (boolean) o;
+	} catch (InvalidCommunicationException | 
+			ClassNotFoundException |
+			IOException |
+			InvalidParameterException ex) {
+		System.out.println(ex.getMessage());
+	}
+	return reussi;
+	
+}
+public boolean supprimer() {
+	return supprimer(IDENTIFIANT);
+}
+
+public static Set<Evenement> getAll(){
+	Set<Evenement> evts = new HashSet<>();
+	try {
+		Communication com = new Communication(TypeBackupable.EVENEMENT, Action.GET_ALL);
+		ConnexionServeur.getOOS().writeObject(com);
+		Object o = ConnexionServeur.getIOS().readObject();
+		if ( !(o instanceof Set )) throw new InvalidCommunicationException("La communication n'a pas renvoyé un ensemble");
+		Set s = (Set) o;
+		if (!s.isEmpty()) {
+			o = s.toArray()[0];
+			if (!(o instanceof Evenement)) throw new InvalidCommunicationException("La communication n'a pas renvoyé l'ensemble des événements");
+			evts = (Set<Evenement>) s;
+		}
+	} catch (InvalidCommunicationException | 
+			ClassNotFoundException |
+			IOException |
+			InvalidParameterException ex) {
+		System.out.println(ex.getMessage());
+	}
+	return evts;
+}
+
+@Override
+public Evenement setIdentifiant(int id) {
+	Evenement evt = new Evenement(id, nom,description,places,date,debutH,debutM,duree,createur);
+	evt.placesRestantes = placesRestantes;
+	evt.principale = principale;
+	evt.attente = attente;
+	return evt;
 }
 }

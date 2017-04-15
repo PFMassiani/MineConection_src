@@ -7,4 +7,5 @@ import java.io.Serializable;
 public interface Backupable extends Serializable{
   
   public int getID();
+  public Backupable setIdentifiant(int id);
 }

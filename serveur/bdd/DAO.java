@@ -155,7 +155,7 @@ public abstract class DAO<T extends Backupable> {
   public Set<T> getAll(){
 	  Set<T> all = new HashSet<>();
 	  try {
-		  ResultSet r = connexion.prepareStatement("SELECT * FROM " + champPrimaire).executeQuery();
+		  ResultSet r = connexion.prepareStatement("SELECT * FROM " + table).executeQuery();
 		  while(r.next()) all.add(charger(r));
 	  } catch (SQLException ex) {
 		  System.out.println("SQLException: " + ex.getMessage());

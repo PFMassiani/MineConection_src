@@ -19,6 +19,7 @@ public class Communication implements Serializable{
     this.o = o;
     id = -1;
     switch (action){
+    case NOUVEAU:
     case SAUVEGARDER:
     case SUPPRIMER:
       if (o == null) throw new InvalidParameterException("L'action demandée requiert un objet de type Utilisateur ou Interaction");
@@ -49,7 +50,6 @@ public class Communication implements Serializable{
 	  o = null;
 	  id = -1;
 	  switch (action) {
-	  case NOUVEAU:
 	  case GET_IDS:
 	  case GET_ALL:
 		  break;

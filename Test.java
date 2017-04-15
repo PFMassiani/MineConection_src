@@ -11,6 +11,7 @@ import share.interaction.Evenement;
 import share.utilisateur.Etudiant;
 import share.communication.Action;
 import share.communication.Communication;
+import share.communication.ConnexionServeur;
 import share.communication.TypeBackupable;
 
 @SuppressWarnings("unused")
@@ -37,14 +38,8 @@ public class Test {
 
 	public static void viderEtudiant(){
 		Set<Integer> ids = Etudiant.ids();
-		try {
-			for (int i : ids){
-				Etudiant.supprimer(i);
-			}
-			System.out.println("Table vidée !");
-		} catch (MissingObjectException e) {
-			System.out.println(e.getMessage());
-		}
+		for (int i : ids) Etudiant.supprimer(i);
+			
 	}
 
 	public static void afficherEtudiant(){
@@ -62,21 +57,17 @@ public class Test {
 		int[] debutH = {1,2}, debutM = {30,40}, duree = {3,4};
 		Etudiant[] e = {Etudiant.getRandomStudent(), Etudiant.getRandomStudent()};
 
-		for (int i = 0; i < 2; i++) new Evenement(nom[i],description[i], places[i], date[i], debutH[i], debutM[i],duree[i],e[i]);
+		for (int i = 0; i < 2; i++) Evenement.nouveau(nom[i],description[i], places[i], date[i], debutH[i], debutM[i],duree[i],e[i]);
 	}
 
 	public static void viderEvenement(){
 		Set<Integer> id = Evenement.ids();
-		Iterator<Integer> it = id.iterator();
-		try {
-			while (it.hasNext()) Evenement.chercher(it.next()).supprimer();
-		} catch (MissingObjectException e) {
-			System.out.println(e.getMessage());
-		}
+		Iterator<Integer> it = id.iterator();	
+		while (it.hasNext()) Evenement.supprimer(it.next());
 	}
 
 	public static Evenement evenementParticipants(){
-		Evenement evt = new Evenement("Événement test", "Test", 10, new java.sql.Date((new java.util.Date()).getTime()), 10,20,30,Etudiant.chercher(71));
+		Evenement evt = Evenement.nouveau("Événement test", "Test", 10, new java.sql.Date((new java.util.Date()).getTime()), 10,20,30,Etudiant.chercher(71));
 		Set<Integer> ids = Etudiant.ids();
 		for (int i : ids) evt.ajouter(Etudiant.chercher(i));
 		return evt;
@@ -115,12 +106,25 @@ public class Test {
 		Set<Integer> allIDs;
 		int id = 0;
 		try {
-			System.out.println(Evenement.getRandomEvent() + "");
-			viderEvenement();
-			remplirEvenement();
 			Socket serv = new Socket ("localhost", port);
 			ObjectOutputStream oos = new ObjectOutputStream(serv.getOutputStream());
 			ObjectInputStream ois = new ObjectInputStream(serv.getInputStream());
+			
+			// CONTRE EXEMPLE MINIMAL
+//			viderEvenement();
+//			remplirEvenement();
+//			evt = Evenement.getRandomEvent();
+//			System.out.println("Événement CEM : " + evt);
+//			boolean reussi = evt.setNom("CEM");
+//			System.out.println("Changement nom CEM réussi : " + reussi);
+//			Set<Integer> idsEtudiants = Etudiant.ids();
+//			System.out.println("Ids étudiants : " + idsEtudiants);
+			
+			viderEvenement();
+			System.out.println("Événements vidés");
+			remplirEvenement();
+			System.out.println("Événements remplis");
+			
 			
 			// TESTS EVENEMENT
 
@@ -132,9 +136,10 @@ public class Test {
 			System.out.println("Événement chargé : " + evt);
 			
 			// Modification Evenement
-			evt.setNom("Nom modifié");
-			com = new Communication(TypeBackupable.EVENEMENT, Action.SAUVEGARDER, evt);
-			oos.writeObject(com);
+			evt = Evenement.getRandomEvent();
+
+			System.out.println("Nom modifié : " + evt.setNom("Nom modifié"));
+			System.out.println("Événement modifié. Chargement de la modification...");
 			com = new Communication(TypeBackupable.EVENEMENT, Action.CHARGER, evt.getID());
 			oos.writeObject(com);
 			evt = (Evenement) ois.readObject();
@@ -147,15 +152,15 @@ public class Test {
 			System.out.println("Événement supprimé");
 			
 			// TESTS ETUDIANT
-			
-			com = new Communication (TypeBackupable.ETUDIANT,Action.CHARGER,Etudiant.getRandomStudent().getID());
+			System.out.println(ois.readObject());
+
+			Etudiant etu = Etudiant.getRandomStudent();
+			com = new Communication (TypeBackupable.ETUDIANT,Action.CHARGER,etu.getID());
 			oos.writeObject(com);
 			et = (Etudiant) ois.readObject();
 			System.out.println("Étudiant chargé: " + et);
 			
 			et.setNom("Nom changééé");
-			com = new Communication(TypeBackupable.ETUDIANT,Action.SAUVEGARDER,et);
-			oos.writeObject(com);
 			com = new Communication(TypeBackupable.ETUDIANT,Action.CHARGER,et.getID());
 			oos.writeObject(com);
 			et = (Etudiant) ois.readObject();

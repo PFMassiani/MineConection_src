@@ -12,7 +12,7 @@ public class ConnexionServeur {
 	private static ObjectInputStream ios;
 	
 	{
-		new ConnexionServeur();
+		//new ConnexionServeur();
 	}
 	
 	private ConnexionServeur() {
