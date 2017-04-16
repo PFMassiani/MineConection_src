@@ -191,6 +191,22 @@ public class Calendrier implements Backupable{
 		 cal.attente = attente;
 		 return cal;
 	 }
+	
+	public static Calendrier nouveau(int id) {
+		Calendrier cal = new Calendrier(id);
+		
+		try {
+			Communication com = new Communication(TypeBackupable.CALENDRIER, Action.NOUVEAU, cal);
+			ConnexionServeur.getOOS().writeObject(com);
+			Object o = ConnexionServeur.getIOS().readObject();
+			if (!(o instanceof Calendrier)) throw new InvalidCommunicationException("La communication n'a pas renvoyé un calendrier");
+			cal = (Calendrier) o;
+		} catch (ClassNotFoundException | IOException | InvalidCommunicationException | InvalidParameterException ex) {
+			ex.printStackTrace();
+		}
+		
+		return cal;
+	}
 }
 
 class ComparateurEvt implements Comparator<Evenement>,Serializable {

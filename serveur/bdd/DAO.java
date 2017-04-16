@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.HashSet;
 
 import exception.MissingObjectException;
+import share.utilisateur.Etudiant;
 
 public abstract class DAO<T extends Backupable> {
   
@@ -167,5 +168,11 @@ public abstract class DAO<T extends Backupable> {
   
   public abstract T charger(ResultSet r) throws SQLException;
   public abstract String getUpdate(T t);
+  public T nouveau(T t) {
+	  int id = getNewID();
+	  T tt = (T) t.setIdentifiant(id);
+	  update(tt);
+	  return tt;
+  }
   
 }

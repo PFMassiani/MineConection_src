@@ -22,7 +22,7 @@ public class Communication implements Serializable{
     case NOUVEAU:
     case SAUVEGARDER:
     case SUPPRIMER:
-      if (o == null) throw new InvalidParameterException("L'action demandée requiert un objet de type Utilisateur ou Interaction");
+      if (o == null) throw new InvalidParameterException("L'action demandée requiert un objet de type Backupable");
       break;
     default:
       break;
@@ -37,7 +37,7 @@ public class Communication implements Serializable{
     switch (action){
     case CHARGER:
     case SUPPRIMER:
-      if (id < 0) throw new InvalidParameterException("L'action demandée requiert un identifiant positif ( id = " + id);
+      if (id < 0) throw new InvalidParameterException("L'action demandée requiert un identifiant positif ( id = " + id + " )");
       break;
     default:
       break;
@@ -54,7 +54,7 @@ public class Communication implements Serializable{
 	  case GET_ALL:
 		  break;
 	  default:
-		  throw new InvalidParameterException("L'action doit être NOUVEAU ( action = " + action + " )");
+		  throw new InvalidParameterException("L'action est invalide ( action = " + action + " )");
 	  }
   }
 

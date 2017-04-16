@@ -120,4 +120,24 @@ public class DACalendrier extends DAO<Calendrier>{
 		// TODO Auto-generated method stub
 		return null;
 	}
+	
+	@Override
+	public Calendrier nouveau(Calendrier cal) {
+		try {
+			String creationTable = "CREATE TABLE IF NOT EXISTS " + getTable(cal)
+			+ " (id_evenement INT UNSIGNED NOT NULL,"
+			+ "liste_principale BOOLEAN NOT NULL, "
+			+ "CONSTRAINT fk_" + getTable(cal) + " FOREIGN KEY (id_evenement) REFERENCES Evenement(id)"
+			+ " ) "
+			+ "ENGINE = INNODB";
+			
+			Connexion.getConnection().prepareStatement(creationTable).executeUpdate();
+		} catch (SQLException ex) {
+			System.out.println("SQLException: " + ex.getMessage());
+			System.out.println("SQLState: " + ex.getSQLState());
+			System.out.println("VendorError: " + ex.getErrorCode());
+		}
+		
+		return cal;
+	}
 }

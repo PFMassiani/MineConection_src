@@ -34,8 +34,6 @@ public class Etudiant extends Utilisateur {
 		promo = pr;
 		telephone = t;
 		calendrier = cal;
-
-		if (IDENTIFIANT == -1) throw new InvalidIDException("");
 	}
 
 	//------------------------------------------------------------------------------------------------------------------------
@@ -176,19 +174,16 @@ public class Etudiant extends Utilisateur {
 		Etudiant e = null;
 		
 		try {
-			Communication com = new Communication(TypeBackupable.ETUDIANT, Action.NOUVEAU);
+			e = new Etudiant(-1, n, p, t, pr, null);
+			Communication com = new Communication(TypeBackupable.ETUDIANT, Action.NOUVEAU, e);
 			ConnexionServeur.getOOS().writeObject(com);
 			Object o = ConnexionServeur.getIOS().readObject();
 			if (!(o instanceof Etudiant)) throw new InvalidCommunicationException("La communication n'a pas renvoyé un Etudiant");
 			e = (Etudiant) o;
+			e.calendrier = Calendrier.nouveau(e.getID());
 		} catch (InvalidCommunicationException | IOException | ClassNotFoundException | InvalidParameterException ex) {
 			  System.out.println(ex.getMessage());
 		}
-		e.setNom(n);
-		e.setPrenom(p);
-		e.setTelephone(t);
-		e.setPromo(pr);
-		e.calendrier = Calendrier.charger(e.getID());
 		return e;
 	}
 	
@@ -243,7 +238,8 @@ public class Etudiant extends Utilisateur {
 
 @Override
 public Etudiant setIdentifiant(int id) {
-	Calendrier cal = calendrier.setIdentifiant(id);
+	Calendrier cal = null;
+	if (calendrier != null) cal = calendrier.setIdentifiant(id);
 	return new Etudiant(id, nom,prenom,telephone,promo,cal);
 }
 }

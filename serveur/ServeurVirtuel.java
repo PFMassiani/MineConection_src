@@ -64,7 +64,7 @@ public class ServeurVirtuel extends Thread {
           switch (action){
 
           case NOUVEAU:
-        	  com.setID(nouveau(com)); 
+        	  nouveau(com);
         	  break;
           case CHARGER:
         	  envoyerObjet(com.getType(), com.getID());
@@ -175,7 +175,7 @@ public class ServeurVirtuel extends Thread {
 	  }
   }
  
-  public int nouveau (Communication com) {
+  public void nouveau (Communication com) {
 	  int id = -1;
 	  TypeBackupable type = com.getType();
 	  Class<?> cDAO = null, c = null;
@@ -183,14 +183,18 @@ public class ServeurVirtuel extends Thread {
 	  try {
 		  cDAO = Class.forName(type.getNomDAO());
 		  c = Class.forName(type.getNomClasse());
-		  Method m = cDAO.getDeclaredMethod("getNewID");
-		  id = (int) m.invoke(type.getDAO());
+
+		  Method m = cDAO.getMethod("nouveau", Class.forName("serveur.bdd.Backupable"));
+		  Object o = m.invoke(type.getDAO(), c.cast(com.getObjet()));
 		  
-		  m = c.getMethod("setIdentifiant", int.class);
-		  Object o = m.invoke(c.cast(com.getObjet()), id);
-		  
-		  m = cDAO.getMethod("update",c);
-		  m.invoke(type.getDAO(), c.cast(o));
+//		  Method m = cDAO.getMethod("getNewID");
+//		  id = (int) m.invoke(type.getDAO());
+//		  
+//		  m = c.getMethod("setIdentifiant", int.class);
+//		  Object o = m.invoke(c.cast(com.getObjet()), id);
+//		  
+//		  m = cDAO.getMethod("update",Class.forName("serveur.bdd.Backupable"));
+//		  m.invoke(type.getDAO(), c.cast(o));
 		  
 		  oos.writeObject(c.cast(o));
 		  
@@ -204,8 +208,6 @@ public class ServeurVirtuel extends Thread {
 		  System.err.println("Erreur: la classe " + c.getName() + " n'implémente pas la méthode getNewID()");
 		  e.printStackTrace();
 	  }
-
-	  return id;
   }
 
   public void envoyerIDs (TypeBackupable type){
