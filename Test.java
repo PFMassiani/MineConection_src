@@ -1,5 +1,8 @@
 import exception.*;
 import java.util.*;
+
+import java.sql.*;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -7,7 +10,9 @@ import java.net.Socket;
 import java.sql.Date;
 import java.sql.ResultSet;
 
+import serveur.bdd.Connexion;
 import share.interaction.Evenement;
+import share.utilisateur.Calendrier;
 import share.utilisateur.Etudiant;
 import share.communication.Action;
 import share.communication.Communication;
@@ -19,9 +24,28 @@ public class Test {
 	private static int port = 10000;
 	public static void main(String[] args0) throws DuplicateIdentifierException{
 		
-		testServeur();
+//		testServeur();
+		viderBase();
 		System.out.println("Done!");
 
+	}
+	
+	public static void viderBase() {
+		String drop = "DROP TABLE ?";
+		String nom = "";
+		String request = "SELECT TABLE_NAME FROM information_schema.tables WHERE TABLE_SCHEMA='mine_connection' AND TABLE_NAME NOT IN ('Association','Evenement','Etudiant')";
+		try {
+			ResultSet r = Connexion.getConnection().prepareStatement(request).executeQuery();
+			PreparedStatement stmt = Connexion.getConnection().prepareStatement(drop);
+			while (r.next()) {
+				nom = r.getString("TABLE_NAME");
+				Connexion.getConnection().prepareStatement("DROP TABLE " + nom).executeUpdate();
+			}
+		} catch(SQLException ex) {
+			System.out.println("SQLException: " + ex.getMessage());
+			System.out.println("SQLState: " + ex.getSQLState());
+			System.out.println("VendorError: " + ex.getErrorCode());
+		}
 	}
 
 	public static void remplirEtudiant(){
@@ -45,7 +69,7 @@ public class Test {
 	public static void afficherEtudiant(){
 		Set<Integer> ids = Etudiant.ids();
 		for (int i : ids){
-			System.out.println(Etudiant.chercher(i));
+//			System.out.println(Etudiant.chercher(i));
 		}
 	}
 
@@ -67,10 +91,15 @@ public class Test {
 	}
 
 	public static Evenement evenementParticipants(){
-		Evenement evt = Evenement.nouveau("Événement test", "Test", 10, new java.sql.Date((new java.util.Date()).getTime()), 10,20,30,Etudiant.chercher(71));
-		Set<Integer> ids = Etudiant.ids();
-		for (int i : ids) evt.ajouter(Etudiant.chercher(i));
-		return evt;
+////		Evenement evt = Evenement.nouveau("Événement test", "Test", 10, new java.sql.Date((new java.util.Date()).getTime()), 10,20,30,Etudiant.chercher(71));
+//		Set<Integer> ids = Etudiant.ids();
+//		for (int i : ids) evt.ajouter(Etudiant.chercher(i));
+//		return evt;
+		return null;
+	}
+	public static void afficherEvenement() {
+		Set<Evenement> evts = Evenement.getAll();
+		for(Evenement e : evts) System.out.println(e.toString());
 	}
 
 	public static void testerAntecedence(){
@@ -180,11 +209,42 @@ public class Test {
 //			com = new Communication (TypeBackupable.ETUDIANT, Action.SUPPRIMER, et);
 //			oos.writeObject(com);
 //			System.out.println("Étudiant supprimé");
+//			
+//			et = Etudiant.nouveau("Lemon", "John", "0102030405", 16);
+//			System.out.println("Bienvenue à " + et);
+//			System.out.println("Son calendrier est :");
+
+
+
+			viderEvenement();
+			viderEtudiant();
+			viderEvenement();
+			viderEtudiant();
+
+			remplirEtudiant();
+			remplirEvenement();
+			afficherEtudiant();
+			afficherEvenement();
 			
-			et = Etudiant.nouveau("Lemon", "John", "0102030405", 16);
-			System.out.println("Bienvenue à " + et);
-			System.out.println("Son calendrier est :");
+			et = Etudiant.getRandomStudent();
+			evt = Evenement.getRandomEvent();
+			
+			System.out.println("Étudiant choisi : " + et);
+			System.out.println("Événement choisi : " + evt);
+			
+			et.ajouterPrincipale(evt);
 			et.getCalendrier().afficher();
+			
+			//CEM
+//			Etudiant.nouveau("Lemon","John" , "06", 16);
+//			et = Etudiant.chercher(289);
+//			System.out.println(et);
+//
+//			evt = Evenement.getRandomEvent();
+//			System.out.println(evt);
+//			Calendrier cal = et.getCalendrier();
+//			cal.ajouterPrincipale(evt.getID());
+//			cal.afficher();
 			
 			
 			serv.close();

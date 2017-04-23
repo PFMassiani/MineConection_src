@@ -5,7 +5,9 @@ import serveur.bdd.DAO;
 import serveur.bdd.DBModification;
 import share.interaction.Evenement;
 import share.utilisateur.Etudiant;
+import serveur.utilisateur.DACalendrier;
 import serveur.utilisateur.DAEtudiant;
+import share.utilisateur.Calendrier;
 
 import java.sql.*;
 import java.util.Set;
@@ -55,9 +57,25 @@ public class DAEvenement extends DAO<Evenement> {
   
   @Override
   public boolean supprimer(Evenement evt) throws MissingObjectException{
-    boolean reussi = super.supprimer(evt);
-    synchronized(DBModification.getInstance()){
+	  boolean reussi = false;
+      synchronized(DBModification.getInstance()){
       try{
+    	  DACalendrier dac = new DACalendrier();
+    	  Calendrier cal;
+    	  Set<Etudiant> inscrits = inscrits(evt);
+    	  Set<Integer> attente,principale;
+    	  
+    	  for (Etudiant e : inscrits) {
+    		  cal = e.getCalendrier();
+    		  attente = cal.getAttenteClient();
+    		  principale = cal.getPrincipaleClient();
+    		  attente.remove(evt.getID());
+    		  principale.remove(evt.getID());
+    		  dac.update(cal);
+    	  }
+    	  reussi = super.supprimer(evt);
+
+    	  
         if (connexion.prepareStatement("DROP TABLE evt_" + evt.getID()).executeUpdate() == 1) reussi = true; 
       } catch (SQLException ex){
         System.out.println("SQLException: " + ex.getMessage());
@@ -69,18 +87,8 @@ public class DAEvenement extends DAO<Evenement> {
   }
   
   @Override
-  public boolean supprimer(int id) throws MissingObjectException{
-    boolean reussi = super.supprimer(id);
-    synchronized(DBModification.getInstance()){
-      try{
-        if (connexion.prepareStatement("DROP TABLE evt_" + id).executeUpdate() == 1) reussi = true; 
-      } catch (SQLException ex){
-        System.out.println("SQLException: " + ex.getMessage());
-        System.out.println("SQLState: " + ex.getSQLState());
-        System.out.println("VendorError: " + ex.getErrorCode());
-      }
-    }
-    return reussi;
+  public boolean supprimer(int id) throws MissingObjectException{  
+    return supprimer(chercher(id));
   }
   
   @Override
@@ -90,7 +98,22 @@ public class DAEvenement extends DAO<Evenement> {
 	  if (r.getBoolean("createur_est_etudiant") == true) createur = dae.chercher(r.getInt("createur_etudiant_id"));
 //	  else createur = Association.chercher(r.getInt("createur_association_id"));
 
-	  return new Evenement(r.getInt("id"),r.getString("nom"),r.getString("description"),r.getInt("places"),r.getDate("date"),r.getInt("debut_h"),r.getInt("debut_m"),r.getInt("duree"),createur);
+	  Evenement evt = new Evenement(r.getInt("id"),r.getString("nom"),r.getString("description"),r.getInt("places"),r.getInt("places_restantes"),r.getDate("date"),r.getInt("debut_h"),r.getInt("debut_m"),r.getInt("duree"),createur);
+	  Set<Etudiant> principale = evt.principaleClient(), attente = evt.attenteClient();
+	  String chargerListes = "SELECT * FROM " + getTable(evt);
+	  try {
+		  ResultSet rr = serveur.bdd.Connexion.getConnection().prepareStatement(chargerListes).executeQuery();
+		  while (rr.next()) {
+			  // TODO SQLException: Column 'liste_principale' not found.
+			  if (rr.getBoolean("liste_principale") == true) principale.add(dae.chercher(rr.getInt("id_etudiant")));
+			  else attente.add(dae.chercher(rr.getInt("id_etudiant")));
+		  }
+	  } catch (SQLException ex) {
+		  System.out.println("SQLException: " + ex.getMessage());
+		  System.out.println("SQLState: " + ex.getSQLState());
+		  System.out.println("VendorError: " + ex.getErrorCode());
+	  }
+	  return evt;
   }
 
   public Set<share.utilisateur.Etudiant> updatePlaces(Evenement evt){
@@ -135,7 +158,7 @@ public class DAEvenement extends DAO<Evenement> {
 	return "evt_" + evt.getID();
 }
 
-public Set<share.utilisateur.Etudiant> participants(Evenement evt){
+public Set<share.utilisateur.Etudiant> principale(Evenement evt){
 	    Set<share.utilisateur.Etudiant> participants = new HashSet<>();
 
 	    try{
@@ -197,9 +220,9 @@ public Set<share.utilisateur.Etudiant> participants(Evenement evt){
     boolean reussi = false;
     synchronized(DBModification.getInstance()){
       try{
-        if (evt.getPlacesRestantes() > 0 && !evt.principale().contains(e)){
+        if (evt.getPlacesRestantes() > 0){
         	String query;
-        	if (!evt.attente().contains(e)) {
+        	if (!attente(evt).contains(e)) {
         		java.sql.Date maintenant = new java.sql.Date((new java.util.Date()).getTime());
         		query = "INSERT INTO " + getTable(evt) + " (id_etudiant,date_adhesion,liste_principale) VALUES " +
         				"( " + e.getID() + 
@@ -232,7 +255,7 @@ public Set<share.utilisateur.Etudiant> participants(Evenement evt){
     	try{
     		java.sql.Date maintenant = new java.sql.Date((new java.util.Date()).getTime());
     		String query;
-    		if (evt.principale().contains(e)) query = "UPDATE " + getTable(evt) + " SET liste_principale = FALSE WHERE id_etudiant = " + e.getID();
+    		if (principale(evt).contains(e)) query = "UPDATE " + getTable(evt) + " SET liste_principale = FALSE WHERE id_etudiant = " + e.getID();
     		else {
     			query = "INSERT INTO " + getTable(evt) + " (id_etudiant,date_adhesion,liste_principale) VALUES " +
     					"( " + e.getID() + 
@@ -308,20 +331,23 @@ public Set<share.utilisateur.Etudiant> participants(Evenement evt){
 	  boolean reussi = super.update(evt);
 	  Set<share.utilisateur.Etudiant> maj = evt.inscritsClient();
 	  Set<share.utilisateur.Etudiant> nouveaux = evt.inscritsClient();
-	  Set<share.utilisateur.Etudiant> supprimes = participants(evt);
+	  Set<share.utilisateur.Etudiant> supprimes = inscrits(evt);
 	  nouveaux.removeAll(supprimes); // On obtient les nouveaux inscrits
 	  supprimes.removeAll(maj);
 	  maj.removeAll(nouveaux);
 
-	  for (share.utilisateur.Etudiant e : supprimes ) evt.supprimerInscrit(e);
+	  for (share.utilisateur.Etudiant e : supprimes ) supprimerInscrit(evt,e);
 	  for (share.utilisateur.Etudiant e : maj )
-		  if (evt.principaleClient().contains(e) && 
-				  !(reussi = ajouterPrincipale(evt,e)))
-			  ajouterAttente(evt,e);
+		  if (evt.principaleClient().contains(e) ) reussi = ajouterPrincipale(evt,e);
+		  else ajouterAttente(evt,e);
 	  for (share.utilisateur.Etudiant e : nouveaux) 
 		  if (!(reussi = ajouterPrincipale(evt,e)))
 			  reussi = ajouterAttente(evt,e);
 
 	  return reussi;
+  }
+  
+  public static DAEvenement getInstance() {
+	  return new DAEvenement();
   }
 }

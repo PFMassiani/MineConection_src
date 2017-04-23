@@ -10,11 +10,7 @@ public class ConnexionServeur {
 	private static int port = 10000;
 	private static ObjectOutputStream oos;
 	private static ObjectInputStream ios;
-	
-	{
-		//new ConnexionServeur();
-	}
-	
+
 	private ConnexionServeur() {
 		try{
 			serveur = new Socket("localhost", port);
@@ -28,12 +24,12 @@ public class ConnexionServeur {
 		if (serveur == null) new ConnexionServeur();
 		return serveur;
 	}
-	
+
 	public static ObjectOutputStream getOOS() {
 		if( serveur == null ) new ConnexionServeur();
 		return oos;
 	}
-	
+
 	public static ObjectInputStream getIOS() {
 		if( serveur == null ) new ConnexionServeur();
 		return ios;

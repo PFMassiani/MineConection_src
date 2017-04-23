@@ -1,7 +1,6 @@
 package share.utilisateur;
 
 import java.io.IOException;
-import java.sql.Date;
 import java.util.*;
 
 import exception.*;
@@ -99,18 +98,18 @@ public class Etudiant extends Utilisateur {
 	
 	public boolean participer(Evenement e) {
 		boolean surPrincipale = e.ajouter(this);
-		if (surPrincipale) calendrier.ajouterPrincipale(e);
-		else calendrier.ajouterAttente(e);
+		if (surPrincipale) calendrier.ajouterPrincipale(e.getID());
+		else calendrier.ajouterAttente(e.getID());
 		push();
 		return surPrincipale;
 	}
 	public void quitter(Evenement e) {
 		e.supprimerInscrit(this);
-		calendrier.supprimer(e);
+		calendrier.supprimerEvenement(e);
 	}
 	@Override
 	public String toString(){
-		return "Étudiant n°" + IDENTIFIANT + ", " + prenom + " " + nom + " ( P " + promo + " )";
+		return "( " + IDENTIFIANT + " ) " + prenom + " " + nom + " ( P " + promo + " )";
 	}
 
 	@Override
@@ -128,21 +127,22 @@ public class Etudiant extends Utilisateur {
 	@Override
 	public boolean push() {
 		try {
-			Communication com = new Communication(TypeBackupable.ETUDIANT, Action.SAUVEGARDER, this);
+			Communication com = new Communication(TypeBackupable.ETUDIANT, Action.SAUVEGARDER, this, "Sauvegarde de l'étudiant " + toString());
 			ConnexionServeur.getOOS().writeObject(com);
 			
 			Object reussi = ConnexionServeur.getIOS().readObject();
-			if (!(reussi instanceof Boolean)) throw new InvalidCommunicationException("La communication n'a pas renvoyé un booléen");
+			if (!(reussi instanceof Boolean)) throw new InvalidCommunicationException("Le serveur n'a pas renvoyé un booléen");
 			return (boolean) reussi;
 		} catch(IOException | InvalidParameterException | ClassNotFoundException | InvalidCommunicationException ex) {
 			System.out.println(ex.getMessage());
+			ex.printStackTrace();
 		}
 		return false;
 	}
 	
 	public void pull() {
 		try {
-			Communication com = new Communication(TypeBackupable.ETUDIANT, Action.CHARGER, IDENTIFIANT);
+			Communication com = new Communication(TypeBackupable.ETUDIANT, Action.CHARGER, IDENTIFIANT, "Chargement de l'étudiant " + IDENTIFIANT);
 			ConnexionServeur.getOOS().writeObject(com);
 			Object o = ConnexionServeur.getIOS().readObject();
 			if (!(o instanceof Etudiant)) throw new InvalidCommunicationException("Le serveur n'a pas renvoyé la mise à jour");
@@ -154,18 +154,20 @@ public class Etudiant extends Utilisateur {
 			calendrier.pull();
 		} catch(IOException | InvalidParameterException | ClassNotFoundException | InvalidCommunicationException ex) {
 			System.out.println(ex.getMessage());
+			ex.printStackTrace();
 		}
 	}
 	
-	public static Etudiant chercher(int id) {
+	public static Etudiant chercher(int id) throws InvalidCommunicationException{
 		try {
-			  Communication com = new Communication(TypeBackupable.ETUDIANT, Action.CHARGER,id);
+			  Communication com = new Communication(TypeBackupable.ETUDIANT, Action.CHARGER,id, "Chargement de l'étudiant " + id);
 			  ConnexionServeur.getOOS().writeObject(com);
 			  Object o =  ConnexionServeur.getIOS().readObject();
-			  if (!(o instanceof Etudiant)) throw new InvalidCommunicationException("La communication n'a pas renvoyé un Etudiant");
+			  if (!(o instanceof Etudiant)) throw new InvalidCommunicationException("Le serveur n'a pas renvoyé un Etudiant", "Étudiant");
 			  return (Etudiant) o;
-		  } catch (InvalidCommunicationException | IOException | ClassNotFoundException | InvalidParameterException ex) {
+		  } catch (IOException | ClassNotFoundException | InvalidParameterException ex) {
 			  System.out.println(ex.getMessage());
+				ex.printStackTrace();
 		  }
 		  
 		return null;
@@ -175,14 +177,15 @@ public class Etudiant extends Utilisateur {
 		
 		try {
 			e = new Etudiant(-1, n, p, t, pr, null);
-			Communication com = new Communication(TypeBackupable.ETUDIANT, Action.NOUVEAU, e);
+			Communication com = new Communication(TypeBackupable.ETUDIANT, Action.NOUVEAU, e, "Création de l'étudiant " + e.toString());
 			ConnexionServeur.getOOS().writeObject(com);
 			Object o = ConnexionServeur.getIOS().readObject();
-			if (!(o instanceof Etudiant)) throw new InvalidCommunicationException("La communication n'a pas renvoyé un Etudiant");
+			if (!(o instanceof Etudiant)) throw new InvalidCommunicationException("Le serveur n'a pas renvoyé un Etudiant","Étudiant");
 			e = (Etudiant) o;
 			e.calendrier = Calendrier.nouveau(e.getID());
 		} catch (InvalidCommunicationException | IOException | ClassNotFoundException | InvalidParameterException ex) {
 			  System.out.println(ex.getMessage());
+				ex.printStackTrace();
 		}
 		return e;
 	}
@@ -191,18 +194,19 @@ public class Etudiant extends Utilisateur {
 		Set<Integer> ids = new HashSet<>();
 		
 		try {
-			Communication com = new Communication (TypeBackupable.ETUDIANT, Action.GET_IDS);
+			Communication com = new Communication (TypeBackupable.ETUDIANT, Action.GET_IDS, "Récupération des ids des étudiants");
 			ConnexionServeur.getOOS().writeObject(com);
 			Object o = ConnexionServeur.getIOS().readObject();
-			if (!(o instanceof Set)) throw new InvalidCommunicationException("La communication n'a pas renvoyé un ensemble");
-			Set s = (Set) o;
+			if (!(o instanceof Set)) throw new InvalidCommunicationException("Le serveur n'a pas renvoyé un ensemble");
+			Set<?> s = (Set<?>) o;
 			if (!s.isEmpty()) {
 				o = s.toArray()[0];
-				if (!(o instanceof Integer)) throw new InvalidCommunicationException("La communication n'a pas renvoyé l'ensemble des identifiants");
+				if (!(o instanceof Integer)) throw new InvalidCommunicationException("Le serveur n'a pas renvoyé l'ensemble des identifiants");
 				ids = (Set<Integer>) s;
 			}
 		} catch (InvalidCommunicationException | IOException | ClassNotFoundException | InvalidParameterException ex) {
 			  System.out.println(ex.getMessage());
+				ex.printStackTrace();
 		}
 		return ids;
 	}
@@ -210,16 +214,18 @@ public class Etudiant extends Utilisateur {
 	public static boolean supprimer(int id) {
 		boolean reussi = false;
 		try {
-			Communication com = new Communication(TypeBackupable.ETUDIANT, Action.SUPPRIMER,id);
+			Calendrier.supprimer(id);
+			Communication com = new Communication(TypeBackupable.ETUDIANT, Action.SUPPRIMER,id, "Suppression de l'étudiant " + id);
 			ConnexionServeur.getOOS().writeObject(com);
 			Object o = ConnexionServeur.getIOS().readObject();
-			if ( !(o instanceof Boolean )) throw new InvalidCommunicationException("La communication n'a pas renvoyé d'information sur la réussite de la suppression");
+			if ( !(o instanceof Boolean )) throw new InvalidCommunicationException("Le serveur n'a pas renvoyé d'information sur la réussite de la suppression");
 			reussi = (boolean) o;
 		} catch (InvalidCommunicationException | 
 				ClassNotFoundException |
 				IOException |
 				InvalidParameterException ex) {
 			System.out.println(ex.getMessage());
+			ex.printStackTrace();
 		}
 		return reussi;
 		
@@ -230,8 +236,14 @@ public class Etudiant extends Utilisateur {
 		int i = ((int) (Math.random() * ids.size()));
 		Iterator<Integer> it = ids.iterator();
 		for (int j = 0; j < i-1; j++) it.next();
-		
-		return chercher(it.next());
+		Etudiant e = null;
+		try {
+			e = chercher(it.next());
+		} catch (InvalidCommunicationException ex) {
+			System.out.println(ex.getMessage());
+			ex.printStackTrace();
+		}
+		return e;
 		
 	}
 	
@@ -242,4 +254,49 @@ public Etudiant setIdentifiant(int id) {
 	if (calendrier != null) cal = calendrier.setIdentifiant(id);
 	return new Etudiant(id, nom,prenom,telephone,promo,cal);
 }
+	
+	public static Set<Etudiant> getAll(){
+		Set<Etudiant> etuds = new HashSet<>();
+		
+		try {
+			Communication com = new Communication (TypeBackupable.ETUDIANT, Action.GET_ALL, "Récupération de tous les étudiants");
+			ConnexionServeur.getOOS().writeObject(com);
+			Object o = ConnexionServeur.getIOS().readObject();
+			if (!(o instanceof Set)) throw new InvalidCommunicationException("Le serveur n'a pas renvoyé un ensemble");
+			Set<?> s = (Set<?>) o;
+			if (!s.isEmpty()) {
+				o = s.toArray()[0];
+				if (!(o instanceof Etudiant)) throw new InvalidCommunicationException("Le serveur n'a pas renvoyé l'ensemble des étudiants");
+				etuds = (Set<Etudiant>) s;
+			}
+		} catch (InvalidCommunicationException | IOException | ClassNotFoundException | InvalidParameterException ex) {
+			  System.out.println(ex.getMessage());
+				ex.printStackTrace();
+		}
+		return etuds;
+	}
+	
+	public boolean ajouterPrincipale(Evenement evt) {
+		if (evt.ajouterPrincipale(this)) return calendrier.ajouterPrincipale(evt.getID());
+		else return false;	
+	}
+	public boolean ajouterAttente(Evenement evt) {
+		if (evt.ajouterAttente(this)) return calendrier.ajouterAttente(evt.getID());
+		else return false;
+	}
+	public boolean surPrincipale(Evenement evt) {
+		return calendrier.surPrincipale(evt);
+	}
+	public boolean surAttente(Evenement evt) {
+		return calendrier.surAttente(evt);
+	}
+	public boolean supprimerInscription(Evenement evt) {
+		boolean reussi = evt.supprimerInscrit(this);
+		reussi |= calendrier.supprimerEvenement(evt);
+		return reussi;
+	}
+	public void afficher() {
+		System.out.println(toString());
+		calendrier.afficher();
+	}
 }

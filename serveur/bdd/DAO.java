@@ -84,7 +84,11 @@ public abstract class DAO<T extends Backupable> {
     synchronized(DBModification.getInstance()){
       try{
     	if ( chercher(obj.getID()) == null) throw new MissingObjectException("L'objet " + obj + " n'a pas pu être trouvé dans la table " + table);
-        if( connexion.prepareStatement("DELETE FROM " + table + " WHERE " + champPrimaire + " = " + obj.getID()).executeUpdate() == 1) reussi = true;
+      } catch (MissingObjectException ex) {
+    	  System.err.println(ex.getMessage());
+      }
+      try{
+    	  if( connexion.prepareStatement("DELETE FROM " + table + " WHERE " + champPrimaire + " = " + obj.getID()).executeUpdate() == 1) reussi = true;
         
       } catch (SQLException ex){
         System.out.println("SQLException: " + ex.getMessage());
@@ -100,7 +104,11 @@ public abstract class DAO<T extends Backupable> {
     synchronized(DBModification.getInstance()){
       try{
     	if ( chercher(id) == null) throw new MissingObjectException("L'objet d'ID " + id + " n'a pas pu être trouvé dans la table " + table);
-        if (connexion.prepareStatement("DELETE FROM " + table + " WHERE " + champPrimaire + " = " + id).executeUpdate() == 1 ) reussi = true;
+      } catch (MissingObjectException ex) {
+    	  System.err.println(ex.getMessage());
+      }
+      try {
+    	  if (connexion.prepareStatement("DELETE FROM " + table + " WHERE " + champPrimaire + " = " + id).executeUpdate() == 1 ) reussi = true;
       } catch (SQLException ex){
         System.out.println("SQLException: " + ex.getMessage());
         System.out.println("SQLState: " + ex.getSQLState());
